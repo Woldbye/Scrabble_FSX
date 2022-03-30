@@ -2,6 +2,7 @@
 
     open Eval
     open ScrabbleUtil
+    open FParsecLight
 
     (*
 
@@ -10,8 +11,7 @@
 
     *)
 
-    open FParsecLight.TextParser             // Example parser combinator library. Use for CodeJudge.
-    // open FParsecLight.TextParser     // Industrial parser-combinator library. Use for Scrabble Project.
+    open FParsecLight.TextParser
     
     let pIntToChar  = pstring "intToChar"
     let pPointValue = pstring "pointValue"
@@ -102,12 +102,14 @@
 (* These five types will move out of this file once you start working on the project *)
 
     type word   = (char * int) list
-    
-    
     type square = Map<int, word -> int -> int -> int>
+  
     type boardFun = coord -> square option
-
-    let parseSquareProg _ = failwith "not implemented"
+    
+    // Given a square program, run the stmntParse on all source code 
+    let parseSquareProg (sqp: squareProg): square = failwith "not implemented"
+        
+         
 
     type board = {
         center        : coord
@@ -115,7 +117,15 @@
         squares       : boardFun
     }
 
-    let parseBoardProg (_: boardProg) : board = failwith "not implemented"
-
     let mkBoard (bp : boardProg) = failwith "not implemented"
+       
+        // let b = {
+        //     center = bp.center;
+        //     defaultSquare = None;
+        //     squares = bp.squares;
+        // }
+        // b
+
+    let parseBoardProg (bp: boardProg) : board = failwith "not implemented"
+        //mkBoard bp
 

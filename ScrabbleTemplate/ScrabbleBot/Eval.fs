@@ -8,6 +8,8 @@
     let state = mkState [("x", 5); ("y", 42)] hello ["_pos_"; "_result_"]
     let emptyState = mkState [] [] []
     
+    let oneOp f a = a >>= fun x -> x |> f |> ret
+
     let twoOp f a b =
         a >>= fun x ->
         b >>= fun y ->
@@ -27,7 +29,11 @@
     let mul = twoOp (*)
     let div = twoNDZOp (/)
     let modS = twoNDZOp (%)
-   
+    let isVowel ch =
+        ch
+        |> System.Char.ToLower 
+        |> fun t -> List.exists (fun v -> v = t ) [ 'a'; 'e'; 'i'; 'o'; 'u'; 'y' ]
+                
 
     type aExp =
         | N of int
@@ -79,19 +85,22 @@
     let (.<=.) a b = a .<. b .||. ~~(a .<>. b)
     let (.>=.) a b = ~~(a .<. b)                (* numeric greater than or equal to *)
     let (.>.) a b = ~~(a .=. b) .&&. (a .>=. b) (* numeric greater than *)    
+    
+    let singleEval ev x f = x |> ev |> f
+    let toupleEval ev x y f = (x |> ev, y |> ev) ||> f
 
-    let rec arithEval a : SM<int> =
-        let tEval x y f = (x |> arithEval, y |> arithEval) ||> f
+    let rec arithEval a : SM<int> =    
+        let atEval = toupleEval arithEval
         match a with
         | N n         -> n |> ret
         | V v         -> v |> lookup
         | WL          -> wordLength
         | PV pv       -> pv |> arithEval >>= pointValue
-        | Add (x, y)  -> tEval x y add
-        | Sub (x, y)  -> tEval x y sub
-        | Mul (x, y)  -> tEval x y mul
-        | Div (x, y)  -> tEval x y div
-        | Mod (x, y)  -> tEval x y modS
+        | Add (x, y)  -> atEval x y add
+        | Sub (x, y)  -> atEval x y sub
+        | Mul (x, y)  -> atEval x y mul
+        | Div (x, y)  -> atEval x y div
+        | Mod (x, y)  -> atEval x y modS
         | CharToInt c -> c |> charEval >>= fun x -> x |> int |> ret
 
     and charEval c : SM<char> =
@@ -101,17 +110,46 @@
         | ToUpper c -> c |> charEval >>= fun x -> x |> System.Char.ToUpper |> ret
         | ToLower c -> c |> charEval >>= fun x -> x |> System.Char.ToLower |> ret
         | IntToChar i -> i |> arithEval >>= fun x -> x |> char |> ret
+    
+    //     type bExp =             
+    //    | TT                   (* true *)
+    //    | FF                   (* false *)
 
-    let boolEval b : SM<bool> = failwith "Not implemented"
+    //    | AEq of aExp * aExp   (* numeric equality *)
+    //    | ALt of aExp * aExp   (* numeric less than *)
 
+    //    | Not of bExp          (* boolean not *)
+    //    | Conj of bExp * bExp  (* boolean conjunction *)
 
+    //    | IsVowel of cExp      (* check for vowel *)
+    //    | IsLetter of cExp     (* check for letter *)
+    //    | IsDigit of cExp
+    
+    // Vowels: a, e, i, o, u, y 
+    // <param b> bExp to evaluate
+    // <returns> A boolean state monad
+    and boolEval (b: bExp) : SM<bool> =
+        let atEval = toupleEval arithEval
+        let btEval = toupleEval boolEval
+        
+        match b with
+        | TT          -> true   |> ret
+        | FF          -> false  |> ret
+        | AEq (a, b)  -> atEval a b (twoOp (=)) 
+        | ALt (a, b)  -> atEval a b (twoOp (<))
+        | Not bx      -> singleEval boolEval bx (oneOp (not))
+        | Conj (a, b) -> btEval a b (twoOp (&&))  
+        | IsVowel c   -> singleEval charEval c (oneOp isVowel)
+        | IsLetter c  -> singleEval charEval c (oneOp System.Char.IsLetter) 
+        | IsDigit c   -> singleEval charEval c (oneOp System.Char.IsDigit) 
+    
     type stm =                (* statements *)
-    | Declare of string       (* variable declaration *)
-    | Ass of string * aExp    (* variable assignment *)
-    | Skip                    (* nop *)
-    | Seq of stm * stm        (* sequential composition *)
-    | ITE of bExp * stm * stm (* if-then-else statement *)
-    | While of bExp * stm     (* while statement *)
+        | Declare of string       (* variable declaration *)
+        | Ass of string * aExp    (* variable assignment *)
+        | Skip                    (* nop *)
+        | Seq of stm * stm        (* sequential composition *)
+        | ITE of bExp * stm * stm (* if-then-else statement *)
+        | While of bExp * stm     (* while statement *)
 
     let rec stmntEval stmnt : SM<unit> = failwith "Not implemented"
 
@@ -138,7 +176,9 @@
     type word = (char * int) list
     type squareFun = word -> int -> int -> Result<int, Error>
 
-    let stmntToSquareFun stm = failwith "Not implemented"
+    // Returns a function that: 
+    // Given a word, position and an acc   
+    let stmntToSquareFun (statement: stm): squareFun = failwith "Not implemented"
 
 
     type coord = int * int

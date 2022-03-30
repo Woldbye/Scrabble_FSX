@@ -4,6 +4,7 @@ module internal Parser
     
     open Eval
     open ScrabbleUtil
+    open FParsecLight
     
     type word   = (char * int) list
     type square = Map<int, word -> int -> int -> int>
