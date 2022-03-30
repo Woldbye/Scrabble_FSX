@@ -1,14 +1,11 @@
-﻿// Insert your StateMonad.fs from Assignment 6 here. All modules must be internal.
-
-
-module internal StateMonad
+﻿module internal StateMonad
 
     type Error = 
         | VarExists of string
         | VarNotFound of string
         | IndexOutOfBounds of int
         | DivisionByZero 
-        | ReservedName of string           
+        | ReservedName of string         
 
     type Result<'a, 'b>  =
         | Success of 'a
@@ -48,13 +45,34 @@ module internal StateMonad
     let push : SM<unit> = 
         S (fun s -> Success ((), {s with vars = Map.empty :: s.vars}))
 
-    let pop : SM<unit> = failwith "Not implemented"      
+    let pop : SM<unit> =
+        let getVars =
+            function
+            | _ :: vars -> vars
+            | _         -> "Pop on empty stack not allowed" |> failwith
+        S (fun s ->
+            Success ((), {s with vars = (s.vars |> getVars) })
+        )
 
-    let wordLength : SM<int> = failwith "Not implemented"      
+    let wordLength : SM<int> =
+        let rec aux acc =
+            function
+            | []      -> acc
+            | _ :: cs -> aux (acc + 1) cs
+        S (fun s -> Success (aux 0 s.word, s))
 
-    let characterValue (pos : int) : SM<char> = failwith "Not implemented"      
+    let fromTouple pos fetch =
+        let aux s w =
+            let rec auxRec word i =
+                match (i, word) with
+                | (_, [])                  -> pos |> IndexOutOfBounds |> fail
+                | (i, t :: _) when i = pos -> t |> fetch |> fun v -> (v, s) |> ret
+                | (i, _ :: word)           -> auxRec word (i+1)
+            auxRec w 0
+        S (fun s -> evalSM s (aux s s.word))
 
-    let pointValue (pos : int) : SM<int> = failwith "Not implemented"      
+    let characterValue (pos : int) : SM<char> = fromTouple pos (fun (c, _) -> c)
+    let pointValue (pos : int) : SM<int> = fromTouple pos (fun (_, v) -> v)
 
     let lookup (x : string) : SM<int> = 
         let rec aux =
@@ -72,3 +90,6 @@ module internal StateMonad
 
     let declare (var : string) : SM<unit> = failwith "Not implemented"   
     let update (var : string) (value : int) : SM<unit> = failwith "Not implemented"      
+              
+
+    

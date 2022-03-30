@@ -1,4 +1,4 @@
-﻿namespace YourClientName
+﻿namespace bufiobot
 
 open ScrabbleUtil
 open ScrabbleUtil.ServerCommunication

@@ -1,11 +1,33 @@
-﻿// Insert your updated Eval.fs file here from Assignment 7. All modules must be internal.
-
-module internal Eval
+﻿module internal Eval
 
     open StateMonad
 
-    let add a b = failwith "Not implemented"      
-    let div a b = failwith "Not implemented"      
+    (* Code for testing *)
+
+    let hello = [('H', 4); ('E', 1); ('L', 1); ('L', 1); ('O', 1)] 
+    let state = mkState [("x", 5); ("y", 42)] hello ["_pos_"; "_result_"]
+    let emptyState = mkState [] [] []
+    
+    let twoOp f a b =
+        a >>= fun x ->
+        b >>= fun y ->
+        (x, y) ||> f |> ret
+
+    
+    let twoNDZOp f a b =
+        a >>= fun x ->
+        b >>= fun y ->
+            match y with
+            | 0 -> fail DivisionByZero
+            | _ -> (x, y) ||> f |> ret
+
+
+    let add = twoOp (+)
+    let sub = twoOp (-)
+    let mul = twoOp (*)
+    let div = twoNDZOp (/)
+    let modS = twoNDZOp (%)
+   
 
     type aExp =
         | N of int
@@ -58,9 +80,27 @@ module internal Eval
     let (.>=.) a b = ~~(a .<. b)                (* numeric greater than or equal to *)
     let (.>.) a b = ~~(a .=. b) .&&. (a .>=. b) (* numeric greater than *)    
 
-    let arithEval a : SM<int> = failwith "Not implemented"      
+    let rec arithEval a : SM<int> =
+        let tEval x y f = (x |> arithEval, y |> arithEval) ||> f
+        match a with
+        | N n         -> n |> ret
+        | V v         -> v |> lookup
+        | WL          -> wordLength
+        | PV pv       -> pv |> arithEval >>= pointValue
+        | Add (x, y)  -> tEval x y add
+        | Sub (x, y)  -> tEval x y sub
+        | Mul (x, y)  -> tEval x y mul
+        | Div (x, y)  -> tEval x y div
+        | Mod (x, y)  -> tEval x y modS
+        | CharToInt c -> c |> charEval >>= fun x -> x |> int |> ret
 
-    let charEval c : SM<char> = failwith "Not implemented"      
+    and charEval c : SM<char> =
+        match c with
+        | C c   -> c |> ret
+        | CV cv -> cv |> arithEval >>= characterValue
+        | ToUpper c -> c |> charEval >>= fun x -> x |> System.Char.ToUpper |> ret
+        | ToLower c -> c |> charEval >>= fun x -> x |> System.Char.ToLower |> ret
+        | IntToChar i -> i |> arithEval >>= fun x -> x |> char |> ret
 
     let boolEval b : SM<bool> = failwith "Not implemented"
 
@@ -93,7 +133,7 @@ module internal Eval
 
     let stmntEval2 stm = failwith "Not implemented"
 
-(* Part 4 *) 
+(* Part 4 (Optional) *) 
 
     type word = (char * int) list
     type squareFun = word -> int -> int -> Result<int, Error>
@@ -114,3 +154,4 @@ module internal Eval
     }
 
     let mkBoard c defaultSq boardStmnt ids = failwith "Not implemented"
+    

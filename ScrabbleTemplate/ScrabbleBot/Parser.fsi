@@ -2,6 +2,7 @@
 
 module internal Parser
     
+    open Eval
     open ScrabbleUtil
     
     type word   = (char * int) list
