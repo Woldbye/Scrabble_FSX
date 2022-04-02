@@ -33,7 +33,6 @@
         ch
         |> System.Char.ToLower 
         |> fun t -> List.exists (fun v -> v = t ) [ 'a'; 'e'; 'i'; 'o'; 'u'; 'y' ]
-                
 
     type aExp =
         | N of int
