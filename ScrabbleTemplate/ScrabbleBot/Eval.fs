@@ -3,7 +3,6 @@
     open StateMonad
 
     (* Code for testing *)
-
     let hello = [('H', 4); ('E', 1); ('L', 1); ('L', 1); ('O', 1)] 
     let state = mkState [("x", 5); ("y", 42)] hello ["_pos_"; "_result_"]
     let emptyState = mkState [] [] []
@@ -15,14 +14,12 @@
         b >>= fun y ->
         (x, y) ||> f |> ret
 
-    
     let twoNDZOp f a b =
         a >>= fun x ->
         b >>= fun y ->
             match y with
             | 0 -> fail DivisionByZero
             | _ -> (x, y) ||> f |> ret
-
 
     let add = twoOp (+)
     let sub = twoOp (-)
@@ -109,20 +106,6 @@
         | ToUpper c -> c |> charEval >>= fun x -> x |> System.Char.ToUpper |> ret
         | ToLower c -> c |> charEval >>= fun x -> x |> System.Char.ToLower |> ret
         | IntToChar i -> i |> arithEval >>= fun x -> x |> char |> ret
-    
-    //     type bExp =             
-    //    | TT                   (* true *)
-    //    | FF                   (* false *)
-
-    //    | AEq of aExp * aExp   (* numeric equality *)
-    //    | ALt of aExp * aExp   (* numeric less than *)
-
-    //    | Not of bExp          (* boolean not *)
-    //    | Conj of bExp * bExp  (* boolean conjunction *)
-
-    //    | IsVowel of cExp      (* check for vowel *)
-    //    | IsLetter of cExp     (* check for letter *)
-    //    | IsDigit of cExp
     
     // Vowels: a, e, i, o, u, y 
     // <param b> bExp to evaluate

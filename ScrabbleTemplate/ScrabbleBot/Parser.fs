@@ -5,10 +5,8 @@
     open FParsecLight
 
     (*
-
     The interfaces for JParsec and FParsecLight are identical and the implementations should always produce the same output
     for successful parses although running times and error messages will differ. Please report any inconsistencies.
-
     *)
 
     open FParsecLight.TextParser
@@ -21,11 +19,11 @@
     let pToLower    = pstring "toLower"
     let pCharValue  = pstring "charValue"
 
-    let pTrue       = pstring "true"
-    let pFalse      = pstring "false"
-    let pIsDigit    = pstring "isDigit"
-    let pIsLetter   = pstring "isLetter"
-    let pIsVowel   = pstring "isVowel"
+    let pTrue     = pstring "true"
+    let pFalse    = pstring "false"
+    let pIsDigit  = pstring "isDigit"
+    let pIsLetter = pstring "isLetter"
+    let pIsVowel  = pstring "isVowel"
 
     let pif       = pstring "if"
     let pthen     = pstring "then"
@@ -53,17 +51,23 @@
         (pletter <|> pchar '_')
         .>>. many (palphanumeric <|> pchar '_')
         |>> fun (x, y) -> List.fold (fun a b -> a + (string b)) (string x) y
-
     
     let unop op = (>*>.) op
     let binop op p1 p2 = (p1 .>*> op) .>*>. p2 
 
+    // Arithmetic
     let TermParse, tref = createParserForwardedToRef<aExp>()
     let ProdParse, pref = createParserForwardedToRef<aExp>()
     let AtomParse, aref = createParserForwardedToRef<aExp>()
-
+    
+    // Char
     let CharParse, cref = createParserForwardedToRef<cExp>()
-
+    
+    // Boolean
+    let BSetParse, bsref = createParserForwardedToRef<bExp>()   // \/, /\
+    let BCmpParse, bcref = createParserForwardedToRef<bExp>()   // =, <>, <, <=, >, >=
+    let BAtomParse, baref = createParserForwardedToRef<bExp>()  // ~, isLetter, isVowel, isDigit
+    
     let AddParse = binop (pchar '+') ProdParse TermParse |>> Add <?> "Add"
     let SubParse = binop (pchar '-') ProdParse TermParse |>> Sub <?> "Sub"
     let CharToIntParse = unop pCharToInt (parenthesise CharParse) |>> CharToInt <?> "CharToInt"
@@ -82,7 +86,8 @@
     do aref := choice [NegParse; PVParse; ParParse; NParse; VarParse]
 
     let AexpParse = TermParse 
-
+    
+    // Char parsing
     let CharAtomParse  = singleQuotes (whitespaceChar <|> palphanumeric) |>> C <?> "C"
 
     let CharValueParse = unop pCharValue (parenthesise TermParse) |>> CV <?> "CV"
@@ -92,15 +97,51 @@
 
     do cref := choice [ ToUpperParse; ToLowerParse; IntToCharParse; CharValueParse; CharAtomParse ]
 
+    // Boolean parser
+    // TT          -> true   |> ret
+    // FF          -> false  |> ret
+    // AEq (a, b)  -> atEval a b (twoOp (=)) 
+    // ALt (a, b)  -> atEval a b (twoOp (<))
+    // Not bx      -> singleEval boolEval bx (oneOp (not))
+    // Conj (a, b) -> btEval a b (twoOp (&&))  
+    // IsVowel c   -> singleEval charEval c (oneOp isVowel)
+    // IsLetter c  -> singleEval charEval c (oneOp System.Char.IsLetter) 
+    // IsDigit c   -> singleEval charEval c (oneOp System.Char.IsDigit) 
+    
+    let ConjParse = binop (pstring "/\\") BCmpParse BSetParse |>> Conj <?> "Conj"
+    let UnionParse = binop (pstring "\\/") BCmpParse BSetParse <?> "Conj"
+                        |>> (fun (a, b) -> Conj (Not a, Not b)) <?> "Conj"
+    
+    do bsref := choice [ ConjParse; UnionParse; BCmpParse ]
+     
+    let AEqParse    = binop (pchar '=') AexpParse AexpParse |>> AEq <?> "AEq"
+    let ANotEqParse = binop (pstring "<>") AexpParse AexpParse <?> "AEq"
+                        |>> (fun (a, b) -> Not (AEq (a, b))) <?> "AEq"
+    let ALtParse    = binop (pchar '<') AexpParse AexpParse |>> ALt <?> "ALt"
+    let ALtEqParse  = binop (pstring "<=") AexpParse AexpParse
+                        |>> (fun (a, b) ->  Conj (Not (ALt (a,b)), Not (AEq ((a, b)))))      
+    let AGrtParse   = binop (pchar '>') AexpParse AexpParse 
+                        |>> (fun (a, b) -> Not (Conj (Not (ALt (a,b)), Not (AEq ((a, b))))))
+    let AGrEqParse  = binop (pstring ">=") AexpParse AexpParse 
+                        |>> (fun (a, b) -> Not (ALt (a, b)))
+    
+    bcref := choice [ AEqParse; ANotEqParse; ALtParse; ALtEqParse; AGrtParse; AGrEqParse; BAtomParse ]
+    
+    let isLetterParse = unop pIsLetter CharParse |>> IsLetter <?> "IsLetter"
+
+    let IsLetterParse = oneOp pletter  
+    
+    let TrueParse  = pTrue |>> (fun x -> TT) <?> "True" 
+    let FalseParse = pFalse |>> (fun x -> FF) <?> "False"
+    
+    // do bref := choice [ TrueParse; FalseParse; ArithEqParse; ArithLessThanParse; 
+    //                     NotParse; ConjectionParse; IsVowelParse; IsLetterParse; IsDigitParse ]
+
     let CexpParse = CharParse
-        
-
-    let BexpParse = pstring "not implemented"
-
+    let BexpParse = BSetParse
     let stmntParse = pstring "not implemented"
 
-(* These five types will move out of this file once you start working on the project *)
-
+    (* These five types will move out of this file once you start working on the project *)
     type word   = (char * int) list
     type square = Map<int, word -> int -> int -> int>
   
@@ -108,7 +149,6 @@
     // Given a square program, run the stmntParse on all source code 
     let parseSquareProg (sqp: squareProg): square = failwith "not implemented"
         
-    
     type board = {
         center        : coord
         defaultSquare : square
@@ -117,12 +157,12 @@
 
     let mkBoard (bp : boardProg) = failwith "not implemented"
        
-        // let b = {
-        //     center = bp.center;
-        //     defaultSquare = None;
-        //     squares = bp.squares;
-        // }
-        // b
+    // let b = {
+    //     center = bp.center;
+    //     defaultSquare = None;
+    //     squares = bp.squares;
+    // }
+    // b
 
     let parseBoardProg (bp: boardProg) : board = failwith "not implemented"
         //mkBoard bp
