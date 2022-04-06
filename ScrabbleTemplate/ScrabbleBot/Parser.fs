@@ -105,12 +105,10 @@
     type square = Map<int, word -> int -> int -> int>
   
     type boardFun = coord -> square option
-    
     // Given a square program, run the stmntParse on all source code 
     let parseSquareProg (sqp: squareProg): square = failwith "not implemented"
         
-         
-
+    
     type board = {
         center        : coord
         defaultSquare : square

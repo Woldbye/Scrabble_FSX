@@ -142,7 +142,7 @@
         | IsLetter c  -> singleEval charEval c (oneOp System.Char.IsLetter) 
         | IsDigit c   -> singleEval charEval c (oneOp System.Char.IsDigit) 
     
-    type stm =                (* statements *)
+    type stm =                    (* statements *)
         | Declare of string       (* variable declaration *)
         | Ass of string * aExp    (* variable assignment *)
         | Skip                    (* nop *)
