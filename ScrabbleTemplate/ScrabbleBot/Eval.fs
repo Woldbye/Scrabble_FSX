@@ -117,10 +117,12 @@
         | ToUpper c -> c |> charEval >>= fun x -> x |> System.Char.ToUpper |> ret
         | ToLower c -> c |> charEval >>= fun x -> x |> System.Char.ToLower |> ret
         | IntToChar i -> i |> arithEval >>= fun x -> x |> char |> ret
-    
-    // Vowels: a, e, i, o, u, y 
-    // <param b> bExp to evaluate
-    // <returns> A boolean state monad
+
+    /// <summary>
+    /// Evaluate a bExp to a boolean state monad
+    /// </summary>
+    /// <param name="b"> A bExp to evaluate </param>
+    /// <returns> A boolean state monad </returns>
     and boolEval (b: bExp) : SM<bool> =
         let atEval = toupleEval arithEval
         let btEval = toupleEval boolEval
@@ -137,16 +139,21 @@
         | IsDigit c   -> singleEval charEval c (oneOp System.Char.IsDigit) 
 
     and stmntEval (stmnt: stm) : SM<unit> = 
-        let atEval = toupleEval arithEval
-        let btEval = toupleEval boolEval
+        let branch st = push >>>= (stmntEval st) >>>= pop
+        
         match stmnt with
-        | Declare s       ->
-            lookup s >>= 
-        | Ass (str, a)    -> false  |> ret
-        | Skip            -> atEval a b (twoOp (=)) 
-        | Seq (s1, s2)    -> atEval a b (twoOp (<))
-        | ITE (b, s1, s2) -> singleEval boolEval bx (oneOp (not))
-        | While (b, s)    -> btEval a b (twoOp (&&))  
+        | Declare s       -> s |> declare                               // Declare variable
+        | Ass (str, a)    -> arithEval a >>= fun v -> (update str v)    // Update variable
+        | Skip            -> () |> ret                                  // noOp
+        | Seq (s1, s2)    -> stmntEval s1 >>>= stmntEval s2             // Seperate into sequences
+        | ITE (b, s1, s2) -> boolEval b >>= (fun o -> (if o then s1 else s2) |> branch)
+        | While (b, s)    -> 
+            boolEval b
+            >>= function
+                | true ->
+                    s |> branch
+                    >>>= ((b, s) |> While |> stmntEval)
+                | false -> Skip |> stmntEval
 
 
 (* Part 3 (Optional) *)

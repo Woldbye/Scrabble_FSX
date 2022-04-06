@@ -72,9 +72,9 @@
 
     let characterValue (pos : int) : SM<char> = fromTouple pos (fun (c, _) -> c)
     let pointValue (pos : int) : SM<int> = fromTouple pos (fun (_, v) -> v)
-
-    // Checks if var is in variables
-    let lookup (x : string) : SM<int> = 
+    
+    // Find variable x in stack and apply f
+    let varFind f (x: string) : SM<'a> =
         let rec aux =
             function
             | []      -> None
@@ -82,36 +82,45 @@
                 match Map.tryFind x m with
                 | Some v -> Some v
                 | None   -> aux ms
-        S (fun s -> 
-              match aux (s.vars) with
-              | Some v -> Success (v, s)
-              | None   -> Failure (VarNotFound x))
+        S (fun s -> f s (aux s.vars))
+
+    // Checks if var is in variables
+    let lookup (x : string) : SM<int> = 
+        let aux s = function
+            | Some v -> Success (v, s)
+            | None   -> Failure (VarNotFound x)
+        varFind aux x
     
     let reservedContains (x : string) : SM<unit> = 
         S (fun s -> 
-              match (Set.contains x s.reserved) with
-              | true  -> Failure (ReservedName x)
-              | false -> Success ((), s))
+            match (Set.contains x s.reserved) with
+            | true  -> Failure (ReservedName x)
+            | false -> Success ((), s))
 
-    let declare (var : string) : SM<unit> =
-        (lookup var) >>= (fun _ -> reservedContains var) // checks
+    let declare (x : string) : SM<unit> =
+        let aux s = function // isFree
+            | Some _ -> Failure (VarExists x)
+            | _      -> Success ((), s)
+
+        (varFind aux x)           // check if declared
+        >>>= (reservedContains x) // check if reserved
         >>>= S (fun s ->
             match s.vars with
-            | top :: tail -> Success ((), {s with vars = top.Add(var, 0) :: tail})
+            | top :: tail -> Success ((), {s with vars = top.Add(x, 0) :: tail})
             | _           -> "Can not get first top of empty stack" |> EmptyStack |> Failure
         )
-
-    let update (var : string) (value : int) : SM<unit>
-     =
-        let rec aux = // find 
-            function
-            | []      -> None
-            | m :: ms -> 
-                match Map.tryFind x m with
-                | Some v -> Some v
-                | None   -> aux ms
+    
+    let update (x : string) (value : int) : SM<unit> =
+        let rec auxChange vars = 
+            match vars with
+            | [] -> [] // never occours
+            | curr :: tail -> 
+                match (Map.tryFind x curr) with
+                | Some _ -> (Map.change x (fun _ -> Some value) curr) :: tail
+                | None   -> curr :: (auxChange tail)
             
-        (lookup var) >>= (fun _ -> )
-              
-
+        lookup x // Check that x exists
+        >>= fun _ -> S ( fun s -> Success ((), { s with vars = auxChange s.vars }) ) // Update value
+        
+    
     
