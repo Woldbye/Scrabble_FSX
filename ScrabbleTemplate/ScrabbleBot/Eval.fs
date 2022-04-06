@@ -31,6 +31,7 @@
         |> System.Char.ToLower 
         |> fun t -> List.exists (fun v -> v = t ) [ 'a'; 'e'; 'i'; 'o'; 'u'; 'y' ]
 
+
     type aExp =
         | N of int
         | V of string
@@ -63,6 +64,16 @@
        | IsVowel of cExp      (* check for vowel *)
        | IsLetter of cExp     (* check for letter *)
        | IsDigit of cExp      (* check for digit *)
+    
+        
+    type stm =                    (* statements *)
+        | Declare of string       (* variable declaration *)
+        | Ass of string * aExp    (* variable assignment *)
+        | Skip                    (* nop *)
+        | Seq of stm * stm        (* sequential composition *)
+        | ITE of bExp * stm * stm (* if-then-else statement *)
+        | While of bExp * stm     (* while statement *)
+
 
     let (.+.) a b = Add (a, b)
     let (.-.) a b = Sub (a, b)
@@ -124,16 +135,19 @@
         | IsVowel c   -> singleEval charEval c (oneOp isVowel)
         | IsLetter c  -> singleEval charEval c (oneOp System.Char.IsLetter) 
         | IsDigit c   -> singleEval charEval c (oneOp System.Char.IsDigit) 
-    
-    type stm =                    (* statements *)
-        | Declare of string       (* variable declaration *)
-        | Ass of string * aExp    (* variable assignment *)
-        | Skip                    (* nop *)
-        | Seq of stm * stm        (* sequential composition *)
-        | ITE of bExp * stm * stm (* if-then-else statement *)
-        | While of bExp * stm     (* while statement *)
 
-    let rec stmntEval stmnt : SM<unit> = failwith "Not implemented"
+    and stmntEval (stmnt: stm) : SM<unit> = 
+        let atEval = toupleEval arithEval
+        let btEval = toupleEval boolEval
+        match stmnt with
+        | Declare s       ->
+            lookup s >>= 
+        | Ass (str, a)    -> false  |> ret
+        | Skip            -> atEval a b (twoOp (=)) 
+        | Seq (s1, s2)    -> atEval a b (twoOp (<))
+        | ITE (b, s1, s2) -> singleEval boolEval bx (oneOp (not))
+        | While (b, s)    -> btEval a b (twoOp (&&))  
+
 
 (* Part 3 (Optional) *)
 

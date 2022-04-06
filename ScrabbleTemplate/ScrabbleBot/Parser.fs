@@ -127,15 +127,15 @@
     
     bcref := choice [ AEqParse; ANotEqParse; ALtParse; ALtEqParse; AGrtParse; AGrEqParse; BAtomParse ]
     
-    let isLetterParse = unop pIsLetter CharParse |>> IsLetter <?> "IsLetter"
+    let notParse      = unop (pchar '~') BAtomParse |>> Not <?> "Not"
+    let isLetterParse = unop pIsLetter (parenthesise CharParse) |>> IsLetter <?> "IsLetter"
+    let isVowelParse  = unop pIsVowel (parenthesise CharParse) |>> IsVowel <?> "IsVowel"
+    let isDigitParse  = unop pIsDigit (parenthesise CharParse) |>> IsDigit <?> "IsDigit"
 
-    let IsLetterParse = oneOp pletter  
+    let TrueParse  = pTrue |>> (fun _ -> TT) <?> "TT" 
+    let FalseParse = pFalse |>> (fun _ -> FF) <?> "FF"
     
-    let TrueParse  = pTrue |>> (fun x -> TT) <?> "True" 
-    let FalseParse = pFalse |>> (fun x -> FF) <?> "False"
-    
-    // do bref := choice [ TrueParse; FalseParse; ArithEqParse; ArithLessThanParse; 
-    //                     NotParse; ConjectionParse; IsVowelParse; IsLetterParse; IsDigitParse ]
+    do baref := choice [ notParse; isLetterParse; isVowelParse; isDigitParse; TrueParse; FalseParse ]
 
     let CexpParse = CharParse
     let BexpParse = BSetParse
