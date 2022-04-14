@@ -68,6 +68,9 @@
     let BCmpParse, bcref = createParserForwardedToRef<bExp>()   // =, <>, <, <=, >, >=
     let BAtomParse, baref = createParserForwardedToRef<bExp>()  // ~, isLetter, isVowel, isDigit
     
+    // Statement
+    let StmParse, sref = createParserForwardedToRef<stm>()
+    
     let AddParse = binop (pchar '+') ProdParse TermParse |>> Add <?> "Add"
     let SubParse = binop (pchar '-') ProdParse TermParse |>> Sub <?> "Sub"
     let CharToIntParse = unop pCharToInt (parenthesise CharParse) |>> CharToInt <?> "CharToInt"
@@ -96,17 +99,6 @@
     let IntToCharParse = unop pIntToChar (parenthesise TermParse) |>> IntToChar <?> "IntToChar"
 
     do cref := choice [ ToUpperParse; ToLowerParse; IntToCharParse; CharValueParse; CharAtomParse ]
-
-    // Boolean parser
-    // TT          -> true   |> ret
-    // FF          -> false  |> ret
-    // AEq (a, b)  -> atEval a b (twoOp (=)) 
-    // ALt (a, b)  -> atEval a b (twoOp (<))
-    // Not bx      -> singleEval boolEval bx (oneOp (not))
-    // Conj (a, b) -> btEval a b (twoOp (&&))  
-    // IsVowel c   -> singleEval charEval c (oneOp isVowel)
-    // IsLetter c  -> singleEval charEval c (oneOp System.Char.IsLetter) 
-    // IsDigit c   -> singleEval charEval c (oneOp System.Char.IsDigit) 
     
     let ConjParse = binop (pstring "/\\") BCmpParse BSetParse |>> Conj <?> "Conj"
     let UnionParse = binop (pstring "\\/") BCmpParse BSetParse <?> "Conj"
@@ -136,17 +128,40 @@
     let FalseParse = pFalse |>> (fun _ -> FF) <?> "FF"
     
     do baref := choice [ notParse; isLetterParse; isVowelParse; isDigitParse; TrueParse; FalseParse ]
+    
+    let declareParse = pdeclare |>> (fun s -> Declare s) <?> "Declare"
+    let assParse     = binop (pstring ":=") pid AexpParse |>> (fun (x,y) -> Ass (x, y)) <?> "Ass"
+    let seqParse     = binop (pchar ';') StmParse StmParse |>> (fun (x,y) -> Seq (x, y)) <?> "Seq"
+    let whileParse   = (unop pwhile (parenthesise BSetParse)) .>*>. 
+                       (unop pthen (brackets StmParse)) |>> 
+                       (fun (x,y) -> While (x, y)) <?>
+                       "While"
+    
+    
+    // if and else parse
+    let ifParse      = (unop pif (parenthesise BSetParse)) .>*>.
+                       (unop pthen (brackets StmParse)) .>*>.
+                       (opt (unop pelse (brackets StmParse))) |>>
+                       (fun ((b, s), oe) -> ITE ( b, s,
+                            match oe with 
+                            | Some v -> v
+                            | None   -> Skip
+                       ))
+     
+    do sref := choice [ declareParse; assParse; seqParse; whileParse; ifParse ]
 
     let CexpParse = CharParse
     let BexpParse = BSetParse
-    let stmntParse = pstring "not implemented"
+    let stmntParse = StmParse
 
     (* These five types will move out of this file once you start working on the project *)
     type word   = (char * int) list
     type square = Map<int, word -> int -> int -> int>
   
     type boardFun = coord -> square option
+    
     // Given a square program, run the stmntParse on all source code 
+    //!  TO:DO 2
     let parseSquareProg (sqp: squareProg): square = failwith "not implemented"
         
     type board = {
@@ -155,6 +170,7 @@
         squares       : boardFun
     }
 
+    //! TO:DO 4
     let mkBoard (bp : boardProg) = failwith "not implemented"
        
     // let b = {
@@ -163,7 +179,9 @@
     //     squares = bp.squares;
     // }
     // b
-
+    
+    //! TO:DO 6
     let parseBoardProg (bp: boardProg) : board = failwith "not implemented"
+        // mkboard boardP
         //mkBoard bp
 

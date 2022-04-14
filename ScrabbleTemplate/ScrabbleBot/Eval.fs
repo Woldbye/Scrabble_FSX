@@ -156,8 +156,7 @@
                 | false -> Skip |> stmntEval
 
 
-(* Part 3 (Optional) *)
-
+    (* Part 3 (Optional) *)
     type StateBuilder() =
 
         member this.Bind(f, x)    = f >>= x
@@ -168,19 +167,13 @@
         
     let prog = new StateBuilder()
 
-    let arithEval2 a = failwith "Not implemented"
-    let charEval2 c = failwith "Not implemented"
-    let rec boolEval2 b = failwith "Not implemented"
-
-    let stmntEval2 stm = failwith "Not implemented"
-
-(* Part 4 (Optional) *) 
-
+    (* Part 4 (Optional) *) 
     type word = (char * int) list
     type squareFun = word -> int -> int -> Result<int, Error>
 
     // Returns a function that: 
     // Given a word, position and an acc   
+    //! TO:DO 1
     let stmntToSquareFun (statement: stm): squareFun = failwith "Not implemented"
 
 
@@ -188,6 +181,7 @@
 
     type boardFun = coord -> Result<squareFun option, Error> 
 
+    //! TO:DO 3
     let stmntToBoardFun stm m = failwith "Not implemented"
 
     type board = {
@@ -196,5 +190,6 @@
         squares       : boardFun
     }
 
+    //! TO:DO 5
     let mkBoard c defaultSq boardStmnt ids = failwith "Not implemented"
     
