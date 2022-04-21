@@ -160,10 +160,14 @@
   
     type boardFun = coord -> square option
     
-    // Given a square program, run the stmntParse on all source code 
-    //!  TO:DO 2
-    let parseSquareProg (sqp: squareProg): square = failwith "not implemented"
-        
+    // Given a square program, parse the program to a square
+    let parseSquareProg (sqp: squareProg): square =
+        let exec cmd = Map.map (fun _ v -> v |> cmd) 
+        sqp
+        |> exec (run stmntParse)
+        |> exec getSuccess
+        |> exec stmntToSquareFun
+    
     type board = {
         center        : coord
         defaultSquare : square

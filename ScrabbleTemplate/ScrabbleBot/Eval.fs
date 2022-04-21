@@ -169,14 +169,23 @@
 
     (* Part 4 (Optional) *) 
     type word = (char * int) list
-    type squareFun = word -> int -> int -> Result<int, Error>
+    type squareFun = word -> int -> int -> int
 
     // Returns a function that: 
-    // Given a word, position and an acc   
-    //! TO:DO 1
-    let stmntToSquareFun (statement: stm): squareFun = failwith "Not implemented"
-
-
+    // Given a word, position and an acc
+    let stmntToSquareFun (statement: stm): squareFun =
+        fun w pos acc ->
+            let vars = [("_pos_", pos); ("_acc_", acc); ("_result_", 0)]
+            let rest = ["_pos_"; "_acc_"; "_result_"]
+            let state = mkState vars w rest
+            
+            stmntEval statement
+            >>>= lookup "_result_" 
+            |> evalSM state
+            |> function 
+            | Success s   -> s
+            | Failure _   -> 0
+    
     type coord = int * int
 
     type boardFun = coord -> Result<squareFun option, Error> 
