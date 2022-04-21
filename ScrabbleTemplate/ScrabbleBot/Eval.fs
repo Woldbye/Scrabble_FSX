@@ -190,8 +190,32 @@
 
     type boardFun = coord -> Result<squareFun option, Error> 
 
-    //! TO:DO 3
-    let stmntToBoardFun stm m = failwith "Not implemented"
+    // Create a function stmntToBoardFun : stmnt -> Map<int, squareFun> -> boardFun that given a
+    // statement stm and a a lookup table of identifiers and square functions squares runs stm in the state
+    // where:
+    // The variable environment contains the variables _x_ , _y_ , and _result_ where:
+    // the variables _x_ and _y_ are initialised to be the x- and the y-values of the coordinate to the
+    // board function
+    // the variable _result_ is initialised to 0
+    // The word is set to the empty word (we guarantee it will never be used when evaluating boards)
+    // _x_ , _y_ , and _result_ are reserved words.
+    // after which it looks up the integer value id stored in _result_ and returns
+    // Success (Some sf) , if looking up the key id in squares results in sf
+    // Success None if the key id does not exist in squares
+    // Fails if the evaluation of stm fails.
+    // It is important to note that a result of Success None is not considered a failure, it just means that the
+    // coordinate is empty (outside the board, for instance).
+    
+    let stmntToBoardFun (stm:stm) (m:Map<int, squareFun>) = 
+        fun (x, y) ->
+            let vars = [("_x_", x); ("_y_", y); ("_result_", 0)]
+            let rest = ["_x_"; "_y_"; "_result_"]
+            let state = mkState vars [] rest
+
+            stmntEval stm
+            >>>= lookup "_result_"
+            >>= fun t -> ret (Map.tryFind t m)
+            |> evalSM state
 
     type board = {
         center        : coord
@@ -200,5 +224,4 @@
     }
 
     //! TO:DO 5
-    let mkBoard c defaultSq boardStmnt ids = failwith "Not implemented"
-    
+    // let mkBoard c defaultSq boardStmnt ids =    

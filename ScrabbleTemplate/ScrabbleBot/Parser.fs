@@ -156,10 +156,8 @@
 
     (* These five types will move out of this file once you start working on the project *)
     type word   = (char * int) list
-    type square = Map<int, word -> int -> int -> int>
-  
-    type boardFun = coord -> square option
-    
+    type square = Map<int, squareFun>
+      
     // Given a square program, parse the program to a square
     let parseSquareProg (sqp: squareProg): square =
         let exec cmd = Map.map (fun _ v -> v |> cmd) 
@@ -173,19 +171,33 @@
         defaultSquare : square
         squares       : boardFun
     }
-
-    //! TO:DO 4
-    let mkBoard (bp : boardProg) = failwith "not implemented"
-       
-    // let b = {
-    //     center = bp.center;
-    //     defaultSquare = None;
-    //     squares = bp.squares;
-    // }
-    // b
     
-    //! TO:DO 6
-    let parseBoardProg (bp: boardProg) : board = failwith "not implemented"
+
+// let standardBoard =
+//  mkBoard (0, 0) stmntSingleLetterScore standardBoardFun ids
+    //! TO:DO 4 map<int, square>
+    // type boardFun = coord -> Result<squareFun option, Error>
+    //  coord -> stmnt -> stmnt -> (int * stmnt) list 
+    let parseBoardFun bp m  =
+        run stmntParse bp.prog
+        |> getSuccess
+        |> fun t -> stmntToSquareFun t m
+        //stmntToBoardFun (getSuccess (run stmntParse prog)) 
+        
+    //! TO:DO 61
+    let parseBoardProg (bp: boardProg) : board =
+        let test = parseBoardFun bp
+        let m = Map.map (fun _ v -> parseSquareProg v) bp.squares
+
+        // Squares -> coord -> Result<squareFun option, Error>
+
+        // let squares = parseBoardFun bp.prog (m) |> 
+        //     match x with
+        //     | Success s -> s
+        //     | _         ->  failwith '22' 
+        { center = bp.center
+          defaultSquare = Map.find bp.usedSquare m
+          squares = parseBoardFun bp m }
         // mkboard boardP
         //mkBoard bp
 
