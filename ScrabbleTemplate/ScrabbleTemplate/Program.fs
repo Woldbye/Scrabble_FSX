@@ -3,8 +3,6 @@
 open System
 open bufiobot
 
-// open bufiobot : add import for our bot module
-
 let time f =
     let start = System.DateTime.Now
     let res = f ()

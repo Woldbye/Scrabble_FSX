@@ -173,7 +173,6 @@
       defaultSquare : square
       squares       : boardFun2
   }
-
   
   // Parses input string @prog with @squares into a board function
   let parseBoardProg (prog:string) (squares:Map<int, square>) : boardFun2 =
