@@ -1,18 +1,19 @@
 ﻿// This file is new and hides the implementation details of the parser.
 
 module internal Parser
-    
     open Eval
     open ScrabbleUtil
-    open FParsecLight
+    open StateMonad
     
     type word   = (char * int) list
-    type square = Map<int, word -> int -> int -> int>
-    type boardFun = coord -> square option
+    type square = Map<int, squareFun>
+    
+    type boardFun2 = coord -> Result<square option, Error>
+        
     type board = {
         center        : coord
         defaultSquare : square
-        squares       : boardFun
+        squares       : boardFun2
     }
 
-    val parseBoardProg : boardProg -> board
+    val mkBoard : boardProg -> board

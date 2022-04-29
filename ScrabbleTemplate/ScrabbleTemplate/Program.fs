@@ -1,7 +1,9 @@
-﻿// Learn more about F# at http://fsharp.org
-
+﻿
+// Learn more about F# at http://fsharp.org
 open System
 open bufiobot
+
+// open bufiobot : add import for our bot module
 
 let time f =
     let start = System.DateTime.Now
@@ -21,7 +23,7 @@ let spawnMultiples name dict bot =
 
 [<EntryPoint>]
 let main argv =
-    ScrabbleUtil.DebugPrint.toggleDebugPrint true // Change to false to supress debug output
+    ScrabbleUtil.DebugPrint.toggleDebugPrint false // Change to false to supress debug output
 
     System.Console.BackgroundColor <- System.ConsoleColor.White
     System.Console.ForegroundColor <- System.ConsoleColor.Black
@@ -39,7 +41,7 @@ let main argv =
 //    let board      = ScrabbleUtil.HoleBoard.holeBoard ()
 //    let board      = ScrabbleUtil.InfiniteHoleBoard.infiniteHoleBoard ()
 
-    let words     = readLines "./Dictionaries/English.txt"
+    let words     = readLines "ScrabbleTemplate/Dictionaries/English.txt"
 
     let handSize   = 7u
     let timeout    = None
@@ -52,21 +54,16 @@ let main argv =
         // Some (Dictionary.empty, Dictionary.insert, Dictionary.step, Some Dictionary.reverse) 
         None
 
-    let (dictionary, time) = time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
+    let (dictionary, time) =
+        time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
 
-    // Uncomment to test your dictionary
-    // ScrabbleUtil.DebugPrint.debugPrint ("Dictionary test sucessful\n")
-    // let incorrectWords = ScrabbleUtil.Dictionary.test words 10 (dictionary false) // change to true if using a GADDAG
-    // match incorrectWords with
-    // | [] -> ScrabbleUtil.DebugPrint.debugPrint ("Dictionary test sucessful!\n")
-    // | _  ->
-    //    ScrabbleUtil.DebugPrint.debugPrint ("Dictionary test failed for at least the following words: \n") 
-    //    List.iter (fun str -> ScrabbleUtil.DebugPrint.debugPrint (sprintf "%s\n" str)) incorrectWords
-        
     // Uncomment this line to call your client
-    let players    = [("Bufio", dictionary, Scrabble.startGame)]
-    // let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 2
-    
+    let players
+      = spawnMultiples "Bufiobot" dictionary bufiobot.Scrabble.startGame 4
+      //= [("Bufiobot", bufiobot.Scrabble.startGame)]
+
+   // let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 4
+
 
     do ScrabbleServer.Comm.startGame 
           board dictionary handSize timeout tiles seed port players

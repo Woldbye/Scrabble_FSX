@@ -12,8 +12,8 @@
     <Authors>Christoffer Woldbye and Thomas Schauser</Authors>
     <Product>Bufio</Product>
     <Description>
-    Scrabble Bot for Functional Programming 2022
-    Group name: &lt;Team Skrrrt&gt;
+      Scrabble Bot for Functional Programming 2022
+      Group name: &lt;Team Skrrrt&gt;
     </Description>
   </PropertyGroup>
 
@@ -33,8 +33,13 @@
 
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.1.1" />
-    <PackageReference Include="ScrabbleUtil" Version="1.0.12" />
     <PackageReference Update="FSharp.Core" Version="6.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="ScrabbleUtil, Version=1.0.12.0, Culture=neutral, PublicKeyToken=null">
+      <HintPath>..\dlls\ScrabbleUtil.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
