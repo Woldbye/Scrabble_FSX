@@ -4,8 +4,7 @@ Scrabble Engine implemented as part of the 4th semester for Software Development
 The bot follows the basic tournament [rules](https://www.scrabbleplayers.org/rules/player-rules-20170120.pdf) with a few modifications:
 1. Infinite board sizes
 2. Boards with holes
-3. "*Pieces that are placed on the board are represented as sets of characters and point values. The wildcard piece can then be seen as the set of all characters worth zero points, whereas a letter piece is a
-singleton set with that letter and its point value.*"
+3. "*Pieces that are placed on the board are represented as sets of characters and point values. The wildcard piece can then be seen as the set of all characters worth zero points, whereas a letter piece is a singleton set with that letter and its point value.*"
 4. Tiles are functions that operate on the words placed above them
 
 ## Overview
@@ -34,7 +33,7 @@ Client and server published to *NuGet*-repository. Dependencies are handled auto
   
 ### Missing pieces:
 * *Next_Move* - What is the best possible move.
-* Maintain scrabble board in memory.
+* Maintain scrabble board in memory 
 * Maintain internal state that matches server state.
   
 ### Server

@@ -3,6 +3,7 @@
 open System
 open bufiobot
 
+
 let time f =
     let start = System.DateTime.Now
     let res = f ()
@@ -21,7 +22,7 @@ let spawnMultiples name dict bot =
 
 [<EntryPoint>]
 let main argv =
-    ScrabbleUtil.DebugPrint.toggleDebugPrint false // Change to false to supress debug output
+    ScrabbleUtil.DebugPrint.toggleDebugPrint true // Change to false to supress debug output
 
     System.Console.BackgroundColor <- System.ConsoleColor.White
     System.Console.ForegroundColor <- System.ConsoleColor.Black
@@ -29,15 +30,15 @@ let main argv =
 
 
     let board        = ScrabbleUtil.StandardBoard.standardBoard ()
-//    let board      = ScrabbleUtil.InfiniteBoard.infiniteBoard ()
+    // let board      = ScrabbleUtil.InfiniteBoard.infiniteBoard ()
 
-//    let board      = ScrabbleUtil.RandomBoard.randomBoard ()
-//    let board      = ScrabbleUtil.RandomBoard.randomBoardSeed (Some 42)
-//    let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoard ()
-//    let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoardSeed (Some 42)
+    //    let board      = ScrabbleUtil.RandomBoard.randomBoard ()
+    //    let board      = ScrabbleUtil.RandomBoard.randomBoardSeed (Some 42)
+    //    let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoard ()
+    //let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoardSeed (Some 42)
 
-//    let board      = ScrabbleUtil.HoleBoard.holeBoard ()
-//    let board      = ScrabbleUtil.InfiniteHoleBoard.infiniteHoleBoard ()
+    //    let board      = ScrabbleUtil.HoleBoard.holeBoard ()
+    //    let board      = ScrabbleUtil.InfiniteHoleBoard.infiniteHoleBoard ()
 
     let words     = readLines "ScrabbleTemplate/Dictionaries/English.txt"
 
@@ -46,22 +47,31 @@ let main argv =
     let tiles      = ScrabbleUtil.English.tiles 1u
     let seed       = None
     let port       = 13001
+    
+    
 
-    let dictAPI =
+    let dictAPI: Dictionary.Dict ScrabbleUtil.Dictionary.dictAPI option =
         // Uncomment if you have implemented a dictionary. last element None if you have not implemented a GADDAG
-        // Some (Dictionary.empty, Dictionary.insert, Dictionary.step, Some Dictionary.reverse) 
-        None
+        Some (Dictionary.empty, Dictionary.insert, Dictionary.step, None) 
+        //None
 
     let (dictionary, time) =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
 
+    
+
     // Uncomment this line to call your client
     let players
-      = spawnMultiples "Bufiobot" dictionary bufiobot.Scrabble.startGame 4
+      = spawnMultiples "Bufiobot" dictionary bufiobot.Scrabble.startGame 1
       //= [("Bufiobot", bufiobot.Scrabble.startGame)]
 
-   // let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 4
+    // let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 2
+    
+    // ScrabbleUtil.DebugPrint.debugPrint ("Dictionary test sucessful\n")
+    let incorrectWords = ScrabbleUtil.Dictionary.test words 10 (dictionary false)
 
+    for s in incorrectWords do ScrabbleUtil.DebugPrint.forcePrint (s)
+    // change to true if using a GADDAG
 
     do ScrabbleServer.Comm.startGame 
           board dictionary handSize timeout tiles seed port players
