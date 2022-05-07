@@ -30,7 +30,7 @@ module RegEx =
                 | _ -> failwith "Failed (should never happen)") |>
         Seq.toList
 
- module Print =
+module Print =
 
     let printHand pieces hand =
         hand |>
@@ -47,7 +47,9 @@ module State =
         dict          : Dictionary.Dict
         playerNumber  : uint32
         hand          : MultiSet.MultiSet<uint32>
+        // TO:DO add player number
     }
+
 
     let mkState b d pn h = {board = b; dict = d;  playerNumber = pn; hand = h }
 
@@ -56,40 +58,28 @@ module State =
     let playerNumber st  = st.playerNumber
     let hand st          = st.hand
 
-// OPTIMISZE POINTS RECURSION
-// ONLY LOOK RIGHT AND DOWN
-// IS_VALID : BOOL => 0
-// ---> 
-// |
-// DOWN
-
-// WORDS ON BOARD 
-// SME WORD ON BOARD: ABE
-// HAND: R N E
-// => 
-// "A" : "B" : "E" -> "R" -> "N" -> ""
-//    HE 
-// ABE
-//  
-
-
 
 
 module Scrabble =
     open System.Threading
 
     let playGame cstream pieces (st : State.state) =
-
+        
         let rec aux (st : State.state) =
             Print.printHand pieces (State.hand st)
-
+            
             // remove the force print when you move on from manual input (or when you have learnt the format)
             forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
             Print.printHand pieces (State.hand st)
             let input =  System.Console.ReadLine()
-            let move = RegEx.parseMove input
+            // let move = nextMove(st)
+            let move = RegEx.parseMove input // Find next move 
+            
+            
 
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+            
+            // Send move to server
             send cstream (SMPlay move)
 
             let msg = recv cstream
