@@ -10,6 +10,16 @@ module internal Dictionary
   // Return empty Dict
   let empty (_: unit) : Dict = S (false, Map.empty)
 
+  // Lookup if dict contains s
+  let lookup (s: string) (dict: Dict) : bool =
+    let rec lookupChar (S (_, map)) (lst: char list) =
+      match lst with
+      | x :: xs ->
+        match map.ContainsKey(x) with
+        | true -> lookupChar map.[x] xs 
+        | false -> false
+      | [] -> true
+    lookupChar dict (Seq.toList s)
 
   // Insert s into dict
   let insert (s:string) (dict: Dict) : Dict =
@@ -25,21 +35,12 @@ module internal Dictionary
         getDict map x
         |> fun d -> addChar d xs
         |> fun d -> Map.add x d map
-        |> fun m -> S (isLeaf, m)
-      | [] -> S (true, Map.empty)
-      
+        |> fun m -> 
+          S (isLeaf, m)
+      | [] ->
+        S (true, map)
     addChar dict (Seq.toList s)
 
-  // Lookup if dict contains s
-  let lookup (s: string) (dict: Dict) : bool =
-    let rec lookupChar (S (_, map)) (lst: char list) =
-      match lst with
-      | x :: xs ->
-        match map.ContainsKey(x) with
-        | true -> lookupChar map.[x] xs 
-        | false -> false
-      | [] -> true
-    lookupChar dict (Seq.toList s)
 
   let isWord (d: Dict): (bool * Dict) = 
     d |> fun (S(leaf, _)) -> (leaf, d)

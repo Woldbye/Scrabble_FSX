@@ -56,6 +56,25 @@ module State =
     let playerNumber st  = st.playerNumber
     let hand st          = st.hand
 
+// OPTIMISZE POINTS RECURSION
+// ONLY LOOK RIGHT AND DOWN
+// IS_VALID : BOOL => 0
+// ---> 
+// |
+// DOWN
+
+// WORDS ON BOARD 
+// SME WORD ON BOARD: ABE
+// HAND: R N E
+// => 
+// "A" : "B" : "E" -> "R" -> "N" -> ""
+//    HE 
+// ABE
+//  
+
+
+
+
 module Scrabble =
     open System.Threading
 
@@ -76,6 +95,7 @@ module Scrabble =
             let msg = recv cstream
             debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
 
+            //! [1] TO:DO Implement state updates
             match msg with
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
                 debugPrint (sprintf "Player %d played:\n\t CMPLaySuccessful.. \n\t\tPoints: %d, \n\t\tNewPieces:\n%A\n " (State.playerNumber st) points newPieces)

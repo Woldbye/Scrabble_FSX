@@ -58,19 +58,18 @@ let main argv =
     let (dictionary, time) =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
 
-    
-
     // Uncomment this line to call your client
-    let players
-      = spawnMultiples "Bufiobot" dictionary bufiobot.Scrabble.startGame 1
+    let players = spawnMultiples "Bufiobot" dictionary bufiobot.Scrabble.startGame 1
       //= [("Bufiobot", bufiobot.Scrabble.startGame)]
 
     // let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 2
     
-    // ScrabbleUtil.DebugPrint.debugPrint ("Dictionary test sucessful\n")
-    let incorrectWords = ScrabbleUtil.Dictionary.test words 10 (dictionary false)
+    // Dictionary Test
+    ScrabbleUtil.DebugPrint.debugPrint ("Dictionary test sucessful\n")
+    let incorrectWords = ScrabbleUtil.Dictionary.test words 100 (dictionary false)
+    for s in incorrectWords do ScrabbleUtil.DebugPrint.forcePrint (s + "\n")
 
-    for s in incorrectWords do ScrabbleUtil.DebugPrint.forcePrint (s)
+
     // change to true if using a GADDAG
 
     do ScrabbleServer.Comm.startGame 
