@@ -3,6 +3,8 @@
 // Roots subtree
 // Count: Subtree
 module internal Dictionary
+  // type Dict = 
+    // { IsLeaf : bool; Children : Map<char, Node> } 
   
   // Dict node implemented with Map<Char, Node> for Log(N) lookup
   type Dict = S of (bool * Map<char, Dict>) 
