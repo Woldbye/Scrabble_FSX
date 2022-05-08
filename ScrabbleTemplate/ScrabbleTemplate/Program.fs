@@ -47,8 +47,6 @@ let main argv =
     let tiles      = ScrabbleUtil.English.tiles 1u
     let seed       = None
     let port       = 13001
-    
-    
 
     let dictAPI: Dictionary.Dict ScrabbleUtil.Dictionary.dictAPI option =
         // Uncomment if you have implemented a dictionary. last element None if you have not implemented a GADDAG
@@ -73,7 +71,7 @@ let main argv =
     // change to true if using a GADDAG
 
     do ScrabbleServer.Comm.startGame 
-          board dictionary handSize timeout tiles seed port players
+        board dictionary handSize timeout tiles seed port players
     
     ScrabbleUtil.DebugPrint.forcePrint ("Server has terminated. Press Enter to exit program.\n")
     System.Console.ReadLine () |> ignore

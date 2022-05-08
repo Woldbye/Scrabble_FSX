@@ -208,6 +208,3 @@
         defaultSquare : squareFun
         squares       : boardFun
     }
-
-    //! TO:DO 5
-    // let mkBoard c defaultSq boardStmnt ids =    
