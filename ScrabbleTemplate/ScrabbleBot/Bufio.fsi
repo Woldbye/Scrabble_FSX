@@ -1,6 +1,7 @@
 module internal Bufio
     open ScrabbleUtil
     open Eval
+    open Parser
 
     type stateDto = {
         board         : Parser.board
@@ -18,3 +19,5 @@ module internal Bufio
     val nextMove : stateDto -> move
 
     val isValid : move -> bool    
+
+    val calculatePoints : square list -> tiles:word -> int
