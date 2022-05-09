@@ -100,7 +100,12 @@ module Scrabble =
             | RCM (CMPlayFailed (pid, ms)) ->
                 debugPrint (sprintf "Id: %d\n\tMS: %A\n\t" pid ms)
                 (* Failed play. Update your state *)
-                let st' = st // This state needs to be updated
+                let st' : State.state = {
+                    board = st.board;
+                    dict = st.dict;
+                    playerNumber = st.playerNumber;
+                    hand = st.hand;
+                }
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
