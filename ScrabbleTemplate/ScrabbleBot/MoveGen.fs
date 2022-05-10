@@ -9,6 +9,7 @@ module internal MoveGen
   // assumes w not empty
   let prefix (w:word) : char = w.Head |> fun (c,v) -> c
   let emptyMove: move = []  
+
   /// Returns number of points given for playing `mv` on `state`
   //! TO:DO implement, use calculatePoints for implementation
   let evalMove (st: stateDto) (mv:move) : int =
@@ -50,24 +51,21 @@ module internal MoveGen
   let bestExtension (state: stateDto) (word:word) : move = 
     /// Add tile with `id` to `mv`
     let appendTile (mv:move) (id: uint32) = failwith "not implemented" //! TO:DO implement appendTile
-    
     // Backtracking hand looping recursion
-    let rec loop_hand (st1: stateDto) (h:uint32 list) (acc:move) : move =
-      match h with 
+    let rec loop_hand (hand: MultiSet.MultiSet<uint32>) (dict:Dictionary.Dict) (cids:uint32 list) (acc:move) : move =
+      match cids with 
       | [] -> acc // end recursion
       | cid :: tail -> // cid = char id
         let key : char = state.tiles.[cid] |> fun (c', v') -> c' // extract char from tile
-        let st2 : stateDto = {
-          board = st1.board; 
-          dict = st1.dict |> Dictionary.step key; //! TO:DO add option handling, and evaluate move if st.dict.step Some(true,_)
-          playerNumber = st1.playerNumber;
-          hand = st1.hand |> MultiSet.removeSingle cid;
-          tiles = st1.tiles; 
-        }
+        let dict' : Dictionary.Dict = 
+          match (d |> Dictionary.step key) with 
+          | None -> Dictionary.empty()
+          | Some (_, d') -> d' 
+        let hand' = hand |> MultiSet.removeSingle cid;
         // Skip cid for now and try next char
-        let m1 : move = loop_hand st1 (tail @ cid) acc //! TO:DO add stop for inifinity loop
+        let m1 : move = loop_hand hand d (tail @ cid) acc //! TO:DO add stop for inifinity loop
         // Play cid
-        let m2 : move = loop_hand st2 h (appendTile acc cid)
+        let m2 : move = loop_hand cid (appendTile acc cid)
         max state m1 m2 
 
     let hand_ids = MultiSet.toList state.hand |> List.map (fun (id, _) -> id) 
@@ -75,10 +73,7 @@ module internal MoveGen
     // all available chars on hand
     match (stepWord word state.dict) with 
     | None -> emptyMove
-    | Some (_, d) -> 
-      let st : stateDto = { 
-        board = state.board; dict = d; hand = state.hand; playerNumber = state.playerNumber; tiles = state.tiles; }
-      loop_hand st hand_ids emptyMove
+    | Some (_, d) -> loop_hand state.hand d hand_ids emptyMove
 
   let bestMove (state: stateDto) : move = failwith "not implemented"
     /// Run max_move recursively by applying backtracking
