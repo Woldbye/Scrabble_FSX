@@ -27,6 +27,10 @@
     <Compile Include="Eval.fs" />
     <Compile Include="Parser.fsi" />
     <Compile Include="Parser.fs" />
+    <Compile Include="Entities.fsi" />
+    <Compile Include="Entities.fs" />
+    <Compile Include="MoveGen.fsi" />
+    <Compile Include="MoveGen.fs" />
     <Compile Include="Bufio.fsi" />
     <Compile Include="Bufio.fs" />
     <Compile Include="Scrabble.fsi" />

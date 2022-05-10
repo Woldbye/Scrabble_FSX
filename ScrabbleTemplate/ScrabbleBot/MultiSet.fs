@@ -44,3 +44,7 @@
         match s with 
         | MS(_, 0u)  -> acc
         | MS(mp, _) -> Map.foldBack f mp acc
+
+    let toList (s: MultiSet<'k>) : ('k * uint32) list = 
+        match s with 
+        | MS(mp, _) -> Map.toList mp
