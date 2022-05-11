@@ -7,4 +7,3 @@ module internal Bufio
     // Send move string ?
     val nextMove : stateDto -> move
   
-    val calculatePoints : square list -> tiles:word -> int

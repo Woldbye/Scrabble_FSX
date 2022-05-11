@@ -157,6 +157,7 @@
 
   (* These five types will move out of this file once you start working on the project *)
   type word   = (char * int) list
+  // tile @id
   type square = Map<int, squareFun>
     
   // Given a square program, parse the program to a square

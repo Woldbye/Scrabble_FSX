@@ -7,6 +7,8 @@ open System.IO
 
 open ScrabbleUtil.DebugPrint
 
+open MoveGen
+open Entities
 
 // The RegEx module is only used to parse human input. It is not used for the final product.
 
@@ -41,41 +43,68 @@ module State =
     // Currently, it only keeps track of your hand, your player numer, your board, and your dictionary,
     // but it could, potentially, keep track of other useful
     // information, such as number of players, player turn, etc.
-
+    
     type state = {
         board         : Parser.board
         dict          : Dictionary.Dict
         playerNumber  : uint32
         hand          : MultiSet.MultiSet<uint32>
+        tiles         : Map<uint32, tile>
+        bricks        : Map<coord, tile>
+        hooks         : Hook list // TODO: Fix hooks
         // TO:DO add player number
     }
 
+    // TODO:
+    // Loop through all bricks
+    // Find all hooks
+    //    create helper functions for easier time (next on movement, isSquareOccupied, ...)
+    // Find #chars legal to place
+    // Update states
+    // Send / recieve correct messages
 
-    let mkState b d pn h = {board = b; dict = d;  playerNumber = pn; hand = h }
+
+    let mkState b d pn h t hs r = {board = b; dict = d;  playerNumber = pn; hand = h; tiles = t; hooks = hs; bricks = r }
 
     let board st         = st.board
     let dict st          = st.dict
     let playerNumber st  = st.playerNumber
     let hand st          = st.hand
+    let tiles st         = st.tiles
+    let bricks st        = st.bricks
+    let hooks st         = st.hooks
+
+
+    let toStateDto (s: state) : stateDto =
+      {
+        board         = s |> board
+        dict          = s |> dict
+        playerNumber  = s |> playerNumber
+        hand          = s |> hand
+        tiles         = s |> tiles
+        hooks         = s |> hooks
+        bricks        = s |> bricks
+      }
 
 
 
 module Scrabble =
     open System.Threading
+    open Bufio
+    open MoveGen
 
     let playGame cstream pieces (st : State.state) =
         
         let rec aux (st : State.state) =
             Print.printHand pieces (State.hand st)
-            
+
             // remove the force print when you move on from manual input (or when you have learnt the format)
             forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
             Print.printHand pieces (State.hand st)
-            let input =  System.Console.ReadLine()
-            // let move = nextMove(st)
-            let move = RegEx.parseMove input // Find next move 
-            
-            
+            //let input =  System.Console.ReadLine()
+            let dto = State.toStateDto st
+            let move = Bufio.nextMove dto   // pick next move lets go
+            //let move = RegEx.parseMove input // Find next move 
 
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             
@@ -87,24 +116,47 @@ module Scrabble =
 
             //! [1] TO:DO Implement state updates
             match msg with
+            //                   move points hand
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
                 debugPrint (sprintf "Player %d played:\n\t CMPLaySuccessful.. \n\t\tPoints: %d, \n\t\tNewPieces:\n%A\n " (State.playerNumber st) points newPieces)
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = st // This state needs to be updated
+                // This state needs to be updated
+                let st' : State.state = {
+                  board         = st.board
+                  dict          = st.dict
+                  playerNumber  = st.playerNumber // Increment playerNumber
+                  hand          = st.hand  // clean hand such that move removes chars, and append newPieces
+                  tiles         = st.tiles // Dont touch :)
+                  hooks         = st.hooks // Append word as hook
+                  bricks        = st.bricks
+                } 
                 aux st'
+            //             player move points 
             | RCM (CMPlayed (pid, ms, points)) ->
                 debugPrint (sprintf "Id: %d\n\tMS: %A\n\tPoints: %d\n\t" pid ms points)
+                let hk = ms |> moveToWord
                 (* Successful play by other player. Update your state *)
-                let st' = st // This state needs to be updated
+                let st' : State.state = {
+                  board         = st.board
+                  dict          = st.dict
+                  playerNumber  = st.playerNumber // Increment playerNumber
+                  hand          = st.hand  // clean hand such that move removes chars, and append newPieces
+                  tiles         = st.tiles // Dont touch :)
+                  hooks         = st.hooks   // Append word as hook
+                  bricks        = st.bricks
+                } 
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 debugPrint (sprintf "Id: %d\n\tMS: %A\n\t" pid ms)
                 (* Failed play. Update your state *)
                 let st' : State.state = {
-                    board = st.board;
-                    dict = st.dict;
-                    playerNumber = st.playerNumber;
-                    hand = st.hand;
+                  board         = st |> State.board
+                  dict          = st |> State.dict
+                  playerNumber  = st |> State.playerNumber
+                  hand          = st |> State.hand
+                  tiles         = st |> State.tiles
+                  hooks         = st |> State.hooks
+                  bricks        = st |> State.bricks
                 }
                 aux st'
             | RCM (CMGameOver _) -> ()
@@ -138,5 +190,5 @@ module Scrabble =
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet)
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet tiles [] Map.empty)
         
