@@ -115,16 +115,14 @@ module internal MoveGen
 
   let max (state: stateDto) (mov: Movement) (m1: moveDto) (m2:moveDto) : moveDto =
     let ev = evalMove state
-
     if evalMove st m1 > evalMove st m2 then m1 else m2
-
 
   let bestMove (state: stateDto) : move = 
     // Run max_move recursively by applying backtracking
     let rec aux (s:stateDto) (words:word list) : move =
       match words with
       | w::ws -> 
-        let cur = bestExtension s w
+        let cur = bestExtension s w 
         let next = aux s ws 
         max s cur next
       | [] -> emptyMove // If no more words to check in this branch, just return empty move
