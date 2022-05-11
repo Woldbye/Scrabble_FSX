@@ -169,7 +169,7 @@
 
     (* Part 4 (Optional) *) 
     type word = (char * int) list
-    type squareFun = word -> int -> int -> Result<int, Error>
+    type squareFun = word -> int -> int -> Result<int, Error>   
 
     // Returns a function that: 
     // Given a word, position and an acc

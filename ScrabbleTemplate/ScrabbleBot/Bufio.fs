@@ -6,18 +6,8 @@ module internal Bufio
   open Entities
   open MoveGen
 
-  type stateDto = {
-    board         : Parser.board
-    dict          : Dictionary.Dict
-    playerNumber  : uint32
-    hand          : MultiSet.MultiSet<uint32>
-    // TO:DO add player number
-  }
-
   let nextMove (state: stateDto) : move = failwith "notimplemented" 
-  
-  // type squareFun = word -> int -> int -> Result<int, Error>
-  // type square = Map<int, squareFun>
+
   // Map.toList sq square.
   /// <description> 
   /// Calculate the number of points given for placing `tiles` on `square`.
