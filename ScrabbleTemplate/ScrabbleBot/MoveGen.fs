@@ -51,14 +51,55 @@ module internal MoveGen
 
   let moveToWord (mv: move) : word = List.map (fun (_, (_, w)) -> w) mv
   
-  let moveToHook (mv: move) : Hook =
-    let w = moveToWord mv
-    let (c0, _) :: (c1, _) :: _ = mv
+  let moveToBricksMap (bricks: Map<coord, tile>) (mv: move) : Map<coord, tile> =
+    List.fold (fun s (c, (_, t)) -> Map.add c (Set.add t Set.empty) s) bricks mv
+
+  let isSquareOccupied (bricks: Map<coord, tile>) (c: coord) : bool =
+    Map.containsKey c bricks
+
+  let legalCharCount (bricks: Map<coord, tile>) (mm: Movement) =
+    let rec aux m acc =
+      let isAt c = isSquareOccupied bricks c
+      
+      let ic = m |> getPos |> isAt
+      
+      let (p0, p1) =  m |> getPerpCoords
+      let ip0 = p0 |> isAt
+      let ip1 = p1 |> isAt
+
+      match (ic || ip0 || ip1) with
+      | true  -> acc
+      | false -> aux (nextPos m) (acc + 1)
+
+    aux (nextPos mm) -1
+
+  let bricksToHooks (bricks: Map<coord, tile>) : Hook list =
+
+    let rec aux bs dir acc = 
+      match bs with
+      | (c : coord, t : tile) :: bbs ->
+        let mv = mkMovement c dir
+        let c = legalCharCount bricks mv
+        let h = mkHook mv [t.MinimumElement] c
+        aux bbs dir ([h] @ acc)
+      | []            -> acc
+
+    let blist: (coord * tile) list = bricks |> Map.toList
+    let baux = blist |> aux
     
-    let dir =
-      match (c0, c1) with
-      | ((x0, _), (x1, _)) when x0 = x1 -> Dir.Down
-      | _                               -> Dir.Right
+    let ds = baux Down List.empty
+    let rs = baux Right List.empty
+    let ts = ds @ rs
+    List.filter (fun h -> h.count > 0) ts 
+
+  // let moveToHooks (mv: move) : Hook =
+  //   let w = moveToWord mv
+  //   let (c0, _) :: (c1, _) :: _ = mv
+    
+  //   let dir =
+  //     match (c0, c1) with
+  //     | ((x0, _), (x1, _)) when x0 = x1 -> Dir.Down
+  //     | _                               -> Dir.Right
     
     
 

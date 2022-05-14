@@ -18,12 +18,16 @@ module internal Entities
   type Hook = {
     mov: Movement
     word: word
+    count: int
   }
 
   val updateMovement: Movement -> int -> int -> Movement
   val nextPos: Movement -> Movement
   val getPos: Movement -> coord
-    
+  val getPerpCoords: Movement -> (coord * coord)
+  val mkMovement: (int * int) -> Dir -> Movement  
+  val mkHook: Movement -> word -> int -> Hook
+
   type move = list<coord * (uint32 * (char * int))>
 
   type stateDto = {

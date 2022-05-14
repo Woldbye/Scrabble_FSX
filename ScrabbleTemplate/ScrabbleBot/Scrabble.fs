@@ -101,10 +101,11 @@ module Scrabble =
             // remove the force print when you move on from manual input (or when you have learnt the format)
             forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
             Print.printHand pieces (State.hand st)
+            
             //let input =  System.Console.ReadLine()
-            let dto = State.toStateDto st
-            let move = Bufio.nextMove dto   // pick next move lets go
             //let move = RegEx.parseMove input // Find next move 
+
+            let move = st |> State.toStateDto |> nextMove   // pick next move lets go
 
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             
@@ -121,20 +122,21 @@ module Scrabble =
                 debugPrint (sprintf "Player %d played:\n\t CMPLaySuccessful.. \n\t\tPoints: %d, \n\t\tNewPieces:\n%A\n " (State.playerNumber st) points newPieces)
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
                 // This state needs to be updated
+                let brs = moveToBricksMap st.bricks ms
                 let st' : State.state = {
                   board         = st.board
                   dict          = st.dict
                   playerNumber  = st.playerNumber // Increment playerNumber
                   hand          = st.hand  // clean hand such that move removes chars, and append newPieces
                   tiles         = st.tiles // Dont touch :)
-                  hooks         = st.hooks // Append word as hook
-                  bricks        = st.bricks
+                  hooks         = brs |> bricksToHooks
+                  bricks        = brs
                 } 
                 aux st'
             //             player move points 
             | RCM (CMPlayed (pid, ms, points)) ->
                 debugPrint (sprintf "Id: %d\n\tMS: %A\n\tPoints: %d\n\t" pid ms points)
-                let hk = ms |> moveToWord
+                //let hk = ms |> moveToWord
                 (* Successful play by other player. Update your state *)
                 let st' : State.state = {
                   board         = st.board
