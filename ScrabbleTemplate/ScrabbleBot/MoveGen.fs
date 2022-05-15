@@ -57,7 +57,7 @@ module internal MoveGen
   let isSquareOccupied (bricks: Map<coord, tile>) (c: coord) : bool =
     Map.containsKey c bricks
 
-  let legalCharCount (bricks: Map<coord, tile>) (mm: Movement) =
+  let legalCharCount (bricks: Map<coord, tile>) (mm: Movement) : int =
     let rec aux m acc =
       let isAt c = isSquareOccupied bricks c
       
@@ -160,6 +160,7 @@ module internal MoveGen
       | (d, _) :: _ when d > depth -> emptyMoveDto
       | (_, c) :: tail when MultiSet.contains c hand = false -> loopHand hand depth dict tail acc
       | (d, cid) :: tail -> // cid = char id
+
         // Skip branch
         let m1 : moveDto = loopHand hand depth dict (tail @ [(d + 1, cid)]) acc
 
@@ -189,10 +190,11 @@ module internal MoveGen
     
     // all available chars on hand
     match (stepWord word state.dict) with 
-    | None -> emptyMoveDto
-    | Some (_, d) -> 
+    | Some (_, d) -> d
+    | None ->        state.dict
+    |> fun dict -> 
       List.map (fun h -> (0, h)) handIds 
-      |> fun h -> loopHand state.hand 0 d h emptyMoveDto
+      |> fun h -> loopHand state.hand 0 dict h emptyMoveDto
 
   // Convert the input moveDto to a move
   let toMove (state: stateDto) (mm: Movement) (dto: moveDto) : move =
@@ -215,24 +217,41 @@ module internal MoveGen
     let ev2 = evalMove state (toMove state mov m2)
     if ev1 > ev2 then m1 else m2
 
+  let firstMoveHooks (state: stateDto) : Hook list =
+    let getDefaultHook dir =
+      let mm : Movement = {
+        pos = state.board.center
+        dir = dir
+      }
+      {
+        mov = mm |> prevPos
+        word = []
+        count = state.hand |> MultiSet.size |> int
+      }
+
+    [ getDefaultHook Right; getDefaultHook Down ]
+
   let bestMove (state: stateDto) : move = 
     let maxfun = max state
     let bestext = bestExtension state
 
     let getBest (h: Hook) (cur: moveDto) : moveDto =
       let next = bestext h.word (maxfun h.mov)
+      DebugPrint.debugPrint (sprintf "Best %A \n" next)
       maxfun (h.mov) cur next
 
     // Run max_move recursively by applying backtracking
     let rec aux (hooks: Hook list) (best: moveDto) : move =
       match hooks with
-      | h :: [] ->
-        getBest h best |> (toMove state h.mov)
-      | h :: hs ->
-        getBest h best |> aux hs
+      | h :: [] -> getBest h best |> (toMove state h.mov)
+      | h :: hs -> getBest h best |> aux hs
       | [] -> emptyMove // If no more words to check in this branch, just return empty move
 
-    aux state.hooks emptyMoveDto
+    match state.hooks with
+    | []  -> state |> firstMoveHooks
+    | hks -> hks
+    |> fun hks -> DebugPrint.debugPrint (sprintf "Hooks are %A \n" hks); hks
+    |> fun hks -> aux hks emptyMoveDto 
 
   // stateDto => hook : <Movement, word> 
   // let getMovements (words: word list) : () list 

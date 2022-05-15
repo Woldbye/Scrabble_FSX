@@ -33,6 +33,13 @@ module internal Entities
     | Left  -> updateMovement mov -1  0
     | Right -> updateMovement mov  1  0
 
+  let prevPos (mov: Movement) : Movement =
+    match mov.dir with
+    | Up    -> updateMovement mov  0  1
+    | Down  -> updateMovement mov  0 -1
+    | Left  -> updateMovement mov  1  0
+    | Right -> updateMovement mov -1  0
+
   let getPerpCoords (mov: Movement) : (coord * coord) =
     let (px, py) = mov.pos
     match mov.dir with
@@ -59,6 +66,7 @@ module internal Entities
     board         : Parser.board
     dict          : Dictionary.Dict
     playerNumber  : uint32
+    playerTurn    : uint32
     hand          : MultiSet.MultiSet<uint32>
     tiles         : Map<uint32, tile>
     hooks         : Hook list 

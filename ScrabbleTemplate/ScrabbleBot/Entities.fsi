@@ -23,6 +23,7 @@ module internal Entities
 
   val updateMovement: Movement -> int -> int -> Movement
   val nextPos: Movement -> Movement
+  val prevPos: Movement -> Movement
   val getPos: Movement -> coord
   val getPerpCoords: Movement -> (coord * coord)
   val mkMovement: (int * int) -> Dir -> Movement  
@@ -34,6 +35,7 @@ module internal Entities
     board         : Parser.board
     dict          : Dictionary.Dict
     playerNumber  : uint32
+    playerTurn    : uint32
     hand          : MultiSet.MultiSet<uint32>
     tiles         : Map<uint32, tile>
     hooks         : Hook list

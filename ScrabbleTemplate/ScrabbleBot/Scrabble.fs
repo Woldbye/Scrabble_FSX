@@ -48,6 +48,8 @@ module State =
         board         : Parser.board
         dict          : Dictionary.Dict
         playerNumber  : uint32
+        playerTurn    : uint32
+        nrOfPlayers   : uint32
         hand          : MultiSet.MultiSet<uint32>
         tiles         : Map<uint32, tile>
         bricks        : Map<coord, tile>
@@ -64,11 +66,23 @@ module State =
     // Send / recieve correct messages
 
 
-    let mkState b d pn h t hs r = {board = b; dict = d;  playerNumber = pn; hand = h; tiles = t; hooks = hs; bricks = r }
+    let mkState b d pn pt nop h t hs r = {
+      board = b;
+      dict = d;
+      playerNumber = pn;
+      playerTurn = pt;
+      nrOfPlayers = nop;
+      hand = h;
+      tiles = t;
+      hooks = hs;
+      bricks = r
+    }
 
     let board st         = st.board
     let dict st          = st.dict
     let playerNumber st  = st.playerNumber
+    let playerTurn st    = st.playerTurn
+    let nrOfPlayers st   = st.nrOfPlayers
     let hand st          = st.hand
     let tiles st         = st.tiles
     let bricks st        = st.bricks
@@ -80,6 +94,7 @@ module State =
         board         = s |> board
         dict          = s |> dict
         playerNumber  = s |> playerNumber
+        playerTurn    = s |> playerTurn
         hand          = s |> hand
         tiles         = s |> tiles
         hooks         = s |> hooks
@@ -98,55 +113,68 @@ module Scrabble =
         let rec aux (st : State.state) =
             Print.printHand pieces (State.hand st)
 
-            // remove the force print when you move on from manual input (or when you have learnt the format)
-            forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
-            Print.printHand pieces (State.hand st)
-            
-            //let input =  System.Console.ReadLine()
-            //let move = RegEx.parseMove input // Find next move 
+            // forcePrint (sprintf "playerTurn %d \n" st.playerTurn)
 
-            let move = st |> State.toStateDto |> nextMove   // pick next move lets go
-
-            debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+            match st.playerTurn with
+            | p when p = st.playerNumber ->
+              // pick next move lets go
+              let move = st |> State.toStateDto |> nextMove
+              send cstream (SMPlay move)
+            | _ -> ()
+            // debugPrint (sprintf "Move is %A \n" move)
+            // debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             
             // Send move to server
-            send cstream (SMPlay move)
-
             let msg = recv cstream
-            debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+            
 
-            //! [1] TO:DO Implement state updates
+            // debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+            // debugPrint (sprintf "What is this: \n\t %A \n" msg)
             match msg with
             //                   move points hand
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
-                debugPrint (sprintf "Player %d played:\n\t CMPLaySuccessful.. \n\t\tPoints: %d, \n\t\tNewPieces:\n%A\n " (State.playerNumber st) points newPieces)
+                debugPrint (sprintf "Player %d played:\n\t CMPlaySuccessful.. \n\t\tPoints: %d, \n\t\tNewPieces:\n%A\n " (State.playerNumber st) points newPieces)
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
                 // This state needs to be updated
+ 
+                let removeHandPieces hand =
+                    List.fold (fun s (_, (t, _)) -> MultiSet.removeSingle t s) hand ms
+                
+                let addHandPieces hand =
+                    List.fold (fun acc (x, k) -> MultiSet.add x k acc) hand newPieces
+
                 let brs = moveToBricksMap st.bricks ms
                 let st' : State.state = {
                   board         = st.board
                   dict          = st.dict
                   playerNumber  = st.playerNumber // Increment playerNumber
-                  hand          = st.hand  // clean hand such that move removes chars, and append newPieces
+                  playerTurn    = (st.playerTurn + 1u) % st.nrOfPlayers
+                  nrOfPlayers   = st.nrOfPlayers
+                  hand          = st.hand |> removeHandPieces |> addHandPieces
                   tiles         = st.tiles // Dont touch :)
                   hooks         = brs |> bricksToHooks
                   bricks        = brs
-                } 
+                }
+                forcePrint "1111111\n"
                 aux st'
             //             player move points 
             | RCM (CMPlayed (pid, ms, points)) ->
                 debugPrint (sprintf "Id: %d\n\tMS: %A\n\tPoints: %d\n\t" pid ms points)
                 //let hk = ms |> moveToWord
                 (* Successful play by other player. Update your state *)
+                let brs = moveToBricksMap st.bricks ms
                 let st' : State.state = {
                   board         = st.board
                   dict          = st.dict
                   playerNumber  = st.playerNumber // Increment playerNumber
+                  playerTurn    = (st.playerTurn + 1u) % st.nrOfPlayers
+                  nrOfPlayers   = st.nrOfPlayers
                   hand          = st.hand  // clean hand such that move removes chars, and append newPieces
                   tiles         = st.tiles // Dont touch :)
-                  hooks         = st.hooks   // Append word as hook
-                  bricks        = st.bricks
-                } 
+                  hooks         = brs |> bricksToHooks
+                  bricks        = brs
+                }
+                forcePrint "2222222\n"
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 debugPrint (sprintf "Id: %d\n\tMS: %A\n\t" pid ms)
@@ -155,11 +183,14 @@ module Scrabble =
                   board         = st |> State.board
                   dict          = st |> State.dict
                   playerNumber  = st |> State.playerNumber
+                  playerTurn    = st |> State.playerTurn
+                  nrOfPlayers   = st |> State.nrOfPlayers
                   hand          = st |> State.hand
                   tiles         = st |> State.tiles
                   hooks         = st |> State.hooks
                   bricks        = st |> State.bricks
                 }
+                forcePrint "33333\n"
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
@@ -167,6 +198,7 @@ module Scrabble =
 
 
         aux st
+        forcePrint "Completed!"
 
     let startGame 
             (boardP : boardProg) 
@@ -192,5 +224,5 @@ module Scrabble =
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet tiles [] Map.empty)
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber playerTurn numPlayers handSet tiles [] Map.empty)
         
