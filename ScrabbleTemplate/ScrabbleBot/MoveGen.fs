@@ -4,6 +4,7 @@ module internal MoveGen
   open Parser
   open StateMonad
   open Entities
+  open System
 
     
   // Ordered List of ids
@@ -52,14 +53,15 @@ module internal MoveGen
   let moveToWord (mv: move) : word = List.map (fun (_, (_, w)) -> w) mv
   
   let moveToBricksMap (bricks: Map<coord, tile>) (mv: move) : Map<coord, tile> =
+    //printf "Here it is : %A\n" mv
     List.fold (fun s (c, (_, t)) -> Map.add c (Set.add t Set.empty) s) bricks mv
 
   let isSquareOccupied (bricks: Map<coord, tile>) (c: coord) : bool =
     Map.containsKey c bricks
 
   let legalCharCount (bricks: Map<coord, tile>) (mm: Movement) : int =
+    let isAt c = isSquareOccupied bricks c
     let rec aux m acc =
-      let isAt c = isSquareOccupied bricks c
       
       let ic = m |> getPos |> isAt
       
@@ -67,15 +69,18 @@ module internal MoveGen
       let ip0 = p0 |> isAt
       let ip1 = p1 |> isAt
 
-      match (ic || ip0 || ip1) with
+      match (ic || ip0 || ip1 || (acc > 5)) with
       | true  -> acc
       | false -> aux (nextPos m) (acc + 1)
 
-    aux (nextPos mm) -1
+    // If a brick is already place behind, it is an illegal move
+    let ic = mm |> prevPos |> getPos |> isAt
+    match ic with 
+    | true  -> -1
+    | false -> aux (nextPos mm) -1
 
   let bricksToHooks (bricks: Map<coord, tile>) : Hook list =
-
-    let rec aux bs dir acc = 
+    let rec aux bs dir acc : Hook list = 
       match bs with
       | (c : coord, t : tile) :: bbs ->
         let mv = mkMovement c dir
@@ -90,17 +95,7 @@ module internal MoveGen
     let ds = baux Down List.empty
     let rs = baux Right List.empty
     let ts = ds @ rs
-    List.filter (fun h -> h.count > 0) ts 
-
-  // let moveToHooks (mv: move) : Hook =
-  //   let w = moveToWord mv
-  //   let (c0, _) :: (c1, _) :: _ = mv
-    
-  //   let dir =
-  //     match (c0, c1) with
-  //     | ((x0, _), (x1, _)) when x0 = x1 -> Dir.Down
-  //     | _                               -> Dir.Right
-    
+    List.filter (fun h -> h.count > 0) ts
     
 
 
@@ -110,7 +105,10 @@ module internal MoveGen
     let folder (acc: (square list) option) (c, _) : ((square list) option) =
       match (st.board.squares c) with
         | Success sqOpt when (sqOpt.IsSome && acc.IsSome)
-            -> Some (acc.Value @ [sqOpt.Value])
+            ->
+            match (st.bricks.ContainsKey c) with
+            | true  -> None
+            | false -> Some (acc.Value @ [sqOpt.Value])
         | _ -> None
       
     match mv with 
@@ -129,47 +127,50 @@ module internal MoveGen
   /// None if word is not contained in dict or word is empty
   /// Some d where d is outgoing node from following `w`
   /// <returns/>
-  let stepWord (word: word) (d:Dictionary.Dict) : option<bool * Dictionary.Dict> = 
+  let stepWord (wrd: word) (d:Dictionary.Dict) : option<bool * Dictionary.Dict> = 
     let rec aux (w: word) (res:option<(bool * Dictionary.Dict)>) : option<bool * Dictionary.Dict> =
-      match (res, w) with 
-      | (Some (_, next), _) -> 
-        ((w |> prefix), next) 
-        ||> Dictionary.step 
-        |> aux w 
-      | _ -> res
+      match (w, res) with
+      | ((c, _) :: ws, Some (_, next)) ->
+        //printf "stepping into %c\n" c
+        let nres = Dictionary.step c next
+        aux ws nres
+      | ([], Some r) -> Some r
+      | (_, None)    -> None
 
-    match word with 
-    | [] -> None
-    | _ -> aux word.Tail (Dictionary.step (word |> prefix) d)
+    aux wrd (Some (false, d))
+
 
   // MAX_END_POINT
   // START POINT -> END POINT
   let getMinTile (state: stateDto) (cid: uint32): (char * int) = 
     state.tiles.[cid] |> fun t -> t.MinimumElement
 
+  let getMinChar st i = getMinTile st i |> fun (c, _) -> c
+
   /// <returns> 
   /// Best scoring playable move that extends `word`, 
   /// if no extension available `emptyMove` 
   /// <returns /> 
-  let bestExtension (state: stateDto) (word:word) (maxMove: moveDto -> moveDto -> moveDto) : moveDto =     
+  let bestExtension (state: stateDto) (word:word) (maxMove: moveDto -> moveDto -> moveDto) : moveDto =
     // TECHNIQUE: BACKTRACKING:
     // GOAL: RUN ALL POSSIBLE EXTENSIONS OF INPUT WORD
     let rec loopHand (hand: MultiSet.MultiSet<uint32>) (depth: int) (dict:Dictionary.Dict) (cids:(int * uint32) list) (acc:moveDto) : moveDto =
+      // printf "Depth of: %d \n" depth
+      // printf "With: %A \n" cids
       match cids with 
-      | [] -> emptyMoveDto // end recursion
+      | []                         -> emptyMoveDto // end recursion
       | (d, _) :: _ when d > depth -> emptyMoveDto
       | (_, c) :: tail when MultiSet.contains c hand = false -> loopHand hand depth dict tail acc
       | (d, cid) :: tail -> // cid = char id
-
         // Skip branch
         let m1 : moveDto = loopHand hand depth dict (tail @ [(d + 1, cid)]) acc
 
         // Remove played tile from hand
-        let hand' = hand |> MultiSet.removeSingle cid;
+        let hand' = MultiSet.removeSingle cid hand;
         
         // extract char from tile
         let key : char = getMinTile state cid |> fun (c', _) -> c'
-        
+        //printf "Char is ??? %c\n" key
         // Update move
         let mv' : moveDto = acc @ [cid] 
 
@@ -177,27 +178,66 @@ module internal MoveGen
         let recHandLoop dd = loopHand hand' (depth + 1) dd cids mv'
 
         let m2 : moveDto = 
-          match (dict |> Dictionary.step key) with 
+          match (Dictionary.step key dict) with 
           // No finished word, check sub-branches
           | Some (false, d') -> recHandLoop d'
           | Some (true, d')  -> recHandLoop d' |> maxMove mv'
           // No possible play in sub-branch 
           | None -> emptyMoveDto
         maxMove m1 m2
-        
     // Ids -> state.tiles.[id]
-    let handIds = MultiSet.toList state.hand |> List.map (fun (id, _) -> id) 
+    let handIds =
+      MultiSet.toList state.hand |> List.map (fun (id, _) -> id)
+      |> List.map (fun h -> (0, h))
     
+    //printf "Start word: %A \n" word
     // all available chars on hand
-    match (stepWord word state.dict) with 
-    | Some (_, d) -> d
-    | None ->        state.dict
-    |> fun dict -> 
-      List.map (fun h -> (0, h)) handIds 
-      |> fun h -> loopHand state.hand 0 dict h emptyMoveDto
+    let init = List.fold (fun s (v, _) ->
+        match s with
+        | Some (_, d) -> Dictionary.step v d
+        | None        -> None) (Some (false, state.dict)) word
+
+    match init with 
+    | Some (_, d) -> loopHand state.hand 0 d handIds emptyMoveDto
+    | None -> emptyMoveDto
+
+  // let bestExtension (state: stateDto) (word:word) (maxMove: moveDto -> moveDto -> moveDto) : moveDto =
+  //   let rec aux (dict : Dictionary.Dict) (hand : MultiSet.MultiSet<uint32>) (acc : uint32 list) : moveDto =
+  //     let legal =
+  //       List.fold (
+  //         fun b (i, _) ->
+  //           let c = getMinChar state i
+  //           match (Dictionary.step c dict) with 
+  //           | Some (isWord, dd) -> [(isWord, dd, MultiSet.removeSingle i hand, i)] @ b
+  //           | _                 -> b
+  //       ) List.empty (MultiSet.toList hand)
+
+  //     match List.length legal with 
+  //     | 0 -> emptyMoveDto
+  //     | _ ->
+  //         List.fold (
+  //           fun b (w, d, h, i) ->
+  //             match w with 
+  //             | true  -> acc @ [i]
+  //             | false -> aux d h ( acc @ [i] )
+  //         ) emptyMoveDto legal
+      
+  //   let init = List.fold (fun s (v, _) ->
+  //     match s with
+  //     | Some (_, d) -> printf "Is going into %c\n" v; Dictionary.step v d
+  //     | None        -> None) (Some (false, state.dict)) word
+    
+  //   match init with 
+  //   | Some (_, d) -> aux d state.hand emptyMoveDto
+  //   | None -> emptyMoveDto
+
+    
+
+
 
   // Convert the input moveDto to a move
   let toMove (state: stateDto) (mm: Movement) (dto: moveDto) : move =
+    
     let rec loopDto (mov: Movement) (mdto: moveDto) (acc: move) : move = 
       match mdto with 
       | m :: ms ->
@@ -211,11 +251,11 @@ module internal MoveGen
       | [] -> acc
 
     loopDto mm dto emptyMove
-    
-  let max (state: stateDto) (mov: Movement) (m1: moveDto) (m2:moveDto) : moveDto =
-    let ev1 = evalMove state (toMove state mov m1)
-    let ev2 = evalMove state (toMove state mov m2)
-    if ev1 > ev2 then m1 else m2
+
+  let max (state: stateDto) (mov1: Movement) (mov2: Movement) (m1: moveDto) (m2:moveDto) : (Movement * moveDto) =
+    let ev1 = evalMove state (toMove state mov1 m1)
+    let ev2 = evalMove state (toMove state mov2 m2)
+    if ev1 > ev2 then (mov1, m1) else (mov2, m2)
 
   let firstMoveHooks (state: stateDto) : Hook list =
     let getDefaultHook dir =
@@ -235,27 +275,20 @@ module internal MoveGen
     let maxfun = max state
     let bestext = bestExtension state
 
-    let getBest (h: Hook) (cur: moveDto) : moveDto =
-      let next = bestext h.word (maxfun h.mov)
-      DebugPrint.debugPrint (sprintf "Best %A \n" next)
-      maxfun (h.mov) cur next
+    let getBest (h: Hook) (cur: moveDto) (m: Movement) : (Movement * moveDto) =
+      let bmf a b = maxfun h.mov h.mov a b |> fun (_, d) -> d
+      let next = bestext h.word bmf
+      maxfun m h.mov cur next
 
     // Run max_move recursively by applying backtracking
-    let rec aux (hooks: Hook list) (best: moveDto) : move =
+    let rec aux (hooks: Hook list) (best: moveDto) (bestMm: Movement) : move =
+      // printf "Best for now is %A \n" best
       match hooks with
-      | h :: [] -> getBest h best |> (toMove state h.mov)
-      | h :: hs -> getBest h best |> aux hs
+      | h :: [] -> getBest h best bestMm |> fun (m, d) -> toMove state m d
+      | h :: hs -> getBest h best bestMm |> fun (m, d) -> aux hs d m 
       | [] -> emptyMove // If no more words to check in this branch, just return empty move
 
     match state.hooks with
     | []  -> state |> firstMoveHooks
     | hks -> hks
-    |> fun hks -> DebugPrint.debugPrint (sprintf "Hooks are %A \n" hks); hks
-    |> fun hks -> aux hks emptyMoveDto 
-
-  // stateDto => hook : <Movement, word> 
-  // let getMovements (words: word list) : () list 
-
-  /// Returns true if `mv` would be valid to play on the current state  
-  // let isValid (mv:move) : bool = failwith "Not implemented IsValid"
-  
+    |> fun hks -> aux hks emptyMoveDto hks.Head.mov

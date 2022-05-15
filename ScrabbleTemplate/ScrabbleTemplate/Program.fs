@@ -29,13 +29,13 @@ let main argv =
     System.Console.Clear()
 
 
-    let board        = ScrabbleUtil.StandardBoard.standardBoard ()
+    // let board        = ScrabbleUtil.StandardBoard.standardBoard ()
     //let board      = ScrabbleUtil.InfiniteBoard.infiniteBoard ()
 
     //    let board      = ScrabbleUtil.RandomBoard.randomBoard ()
-    //    let board      = ScrabbleUtil.RandomBoard.randomBoardSeed (Some 42)
+    //let board      = ScrabbleUtil.RandomBoard.randomBoardSeed (Some 42)
     //    let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoard ()
-    // let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoardSeed (Some 42)
+    let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoardSeed (Some 42)
 
     //    let board      = ScrabbleUtil.HoleBoard.holeBoard ()
     //    let board      = ScrabbleUtil.InfiniteHoleBoard.infiniteHoleBoard ()
@@ -64,7 +64,7 @@ let main argv =
     
     // Dictionary Test
     ScrabbleUtil.DebugPrint.debugPrint ("Dictionary test sucessful\n")
-    let incorrectWords = ScrabbleUtil.Dictionary.test words 100 (dictionary false)
+    let incorrectWords = ScrabbleUtil.Dictionary.test words 10000 (dictionary false)
     for s in incorrectWords do ScrabbleUtil.DebugPrint.forcePrint (s + "\n")
 
 

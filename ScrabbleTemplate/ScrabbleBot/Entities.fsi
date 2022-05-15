@@ -40,4 +40,5 @@ module internal Entities
     tiles         : Map<uint32, tile>
     hooks         : Hook list
     bricks        : Map<coord, tile>   
+    turns         : uint32
   }

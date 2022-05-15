@@ -48,7 +48,7 @@ module internal Dictionary
   ///          if there is no path from dict to dict'
   ///              None
   let step (c:char) (S (_, next)) : (bool * Dict) option =
-    match next.TryFind(c) with
+    match next.TryFind c with
     | Some d -> d |> isWord |> Some
     | None -> None
   

@@ -52,7 +52,7 @@ module internal Entities
     pos = p
     dir = d
   }
-  
+
   let mkHook mv w c = {
     mov = mv
     word = w
@@ -71,4 +71,5 @@ module internal Entities
     tiles         : Map<uint32, tile>
     hooks         : Hook list 
     bricks        : Map<coord, tile>   
+    turns         : uint32
   }
