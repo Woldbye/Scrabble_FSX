@@ -114,22 +114,18 @@ module Scrabble =
     let playGame cstream pieces (st : State.state) =
         
         let rec aux (st : State.state) : unit =
-            //printf "Nr of tiles: %d\n" st.bricks.Count 
-            //Print.printHand pieces (State.hand st)
-            //forcePrint (sprintf "Player Turn: %d \n" st.playerTurn)
 
             match st.playerTurn with
             | p when p = st.playerNumber ->
                 //debugPrint "Finding move...\n"
                 let move = st |> State.toStateDto |> nextMove
-                //debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
                 send cstream (SMPlay move)
             | _ -> ()
 
             let msg = recv cstream
             
             match msg with
-            | RCM (CMPlaySuccess(ms, points, newPieces)) ->
+            | RCM (CMPlaySuccess(ms, _, newPieces)) ->
                 
                 let removeHandPieces hand =
                     List.fold (fun s (_, (t, _)) -> MultiSet.removeSingle t s) hand ms
@@ -150,19 +146,18 @@ module Scrabble =
                     turns         = st.turns + 1u
                     timeout       = st.timeout
                 }
-                //printf "New hand: %A\n" st'.hand
                 aux st'
                 
-            | RCM (CMPlayed (pid, ms, points)) ->
+            | RCM (CMPlayed (_, ms, _)) ->
                 let brs = moveToBricksMap st.bricks ms
                 let st' : State.state = {
                   board         = st.board
                   dict          = st.dict
-                  playerNumber  = st.playerNumber // Increment playerNumber
+                  playerNumber  = st.playerNumber
                   playerTurn    = State.nextTurn st
                   nrOfPlayers   = st.nrOfPlayers
-                  hand          = st.hand  // clean hand such that move removes chars, and append newPieces
-                  tiles         = st.tiles // Dont touch :)
+                  hand          = st.hand
+                  tiles         = st.tiles
                   hooks         = brs |> bricksToHooks
                   bricks        = brs
                   turns         = st.turns + 1u
@@ -171,14 +166,13 @@ module Scrabble =
 
                 aux st'
             // If no available play
-            | RCM (CMPlayFailed (pid, ms)) ->
+            | RCM (CMPlayFailed _) ->
 
                 let rec appendNValues k v l =
                     match v with
                     | 0u -> l
                     | _  -> appendNValues k (v - 1u) (l @ [k])
                     
-                 // Here we could insert a better swapping strategy
                 st.hand
                 |> MultiSet.fold ( fun acc k v -> appendNValues k v acc ) List.empty
                 |> SMChange
@@ -193,8 +187,8 @@ module Scrabble =
                     playerNumber  = st.playerNumber // Increment playerNumber
                     playerTurn    = st.playerTurn
                     nrOfPlayers   = st.nrOfPlayers
-                    hand          = MultiSet.addList s MultiSet.empty 
-                    tiles         = st.tiles // Dont touch :)
+                    hand          = MultiSet.addList s MultiSet.empty // Update hand
+                    tiles         = st.tiles
                     hooks         = st.hooks
                     bricks        = st.bricks
                     turns         = st.turns
@@ -207,7 +201,6 @@ module Scrabble =
             | RGPE err -> printfn "Gameplay Error:\n%A" err; aux st
 
         aux st
-        //forcePrint "Completed!"
 
     let startGame 
             (boardP : boardProg) 

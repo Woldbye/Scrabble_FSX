@@ -1,6 +1,7 @@
 ﻿
 // Learn more about F# at http://fsharp.org
 open System
+open System.Threading;
 open bufiobot
 
 
@@ -49,9 +50,7 @@ let main argv =
     let port       = 13001
 
     let dictAPI: Dictionary.Dict ScrabbleUtil.Dictionary.dictAPI option =
-        // Uncomment if you have implemented a dictionary. last element None if you have not implemented a GADDAG
         Some (Dictionary.empty, Dictionary.insert, Dictionary.step, None) 
-        //None
 
     let (dictionary, time) =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
@@ -60,14 +59,14 @@ let main argv =
     let players = // spawnMultiples "Bufiobot" dictionary Oxyphenbutazone.Scrabble.startGame 2
       [
         ("Bufiobot", dictionary, bufiobot.Scrabble.startGame);
+        ("Bufiobot", dictionary, bufiobot.Scrabble.startGame);
         ("OxyphenButazone", dictionary, Oxyphenbutazone.Scrabble.startGame)
       ]
     // let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 2
     
     // Dictionary Test
-    ScrabbleUtil.DebugPrint.debugPrint ("Dictionary test sucessful\n")
-    let incorrectWords = ScrabbleUtil.Dictionary.test words 10000 (dictionary false)
-    for s in incorrectWords do ScrabbleUtil.DebugPrint.forcePrint (s + "\n")
+    // let incorrectWords = ScrabbleUtil.Dictionary.test words 10000 (dictionary false)
+    // for s in incorrectWords do ScrabbleUtil.DebugPrint.forcePrint (s + "\n")
 
 
     // change to true if using a GADDAG

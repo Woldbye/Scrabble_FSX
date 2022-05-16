@@ -5,13 +5,12 @@ module internal MoveGen
   open StateMonad
   open Entities
   open System
+  open System.Threading
   open System.Threading.Tasks
 
-    
   // Ordered List of ids
   type moveDto = uint32 list
 
-  // type move = list<coord * (uint32 * (char * int))>
   // assumes w not empty
   let prefix (w:word) : char = w.Head |> fun (c,v) -> c
   let emptyMove: move = []  
@@ -45,14 +44,9 @@ module internal MoveGen
     ) (fun i -> i)
     |> fun n -> 0 |> n  
 
-  // 
-  // ['a',0]
-
-
   let moveToWord (mv: move) : word = List.map (fun (_, (_, w)) -> w) mv
   
   let moveToBricksMap (bricks: Map<coord, tile>) (mv: move) : Map<coord, tile> =
-    //printf "Here it is : %A\n" mv
     List.fold (fun s (c, (_, t)) -> Map.add c (Set.add t Set.empty) s) bricks mv
 
   let isSquareOccupied (bricks: Map<coord, tile>) (c: coord) : bool =
@@ -95,9 +89,6 @@ module internal MoveGen
     let rs = baux Right List.empty
     let ts = ds @ rs
     List.filter (fun h -> h.count > 0) ts
-    
-
-
 
   /// Returns number of points given for playing `mv` on `state`
   let evalMove (st: stateDto) (mv:move) : int =
@@ -130,7 +121,6 @@ module internal MoveGen
     let rec aux (w: word) (res:option<(bool * Dictionary.Dict)>) : option<bool * Dictionary.Dict> =
       match (w, res) with
       | ((c, _) :: ws, Some (_, next)) ->
-        //printf "stepping into %c\n" c
         let nres = Dictionary.step c next
         aux ws nres
       | ([], Some r) -> Some r
@@ -152,8 +142,6 @@ module internal MoveGen
     // TECHNIQUE: BACKTRACKING:
     // GOAL: RUN ALL POSSIBLE EXTENSIONS OF INPUT WORD
     let rec loopHand (hand: MultiSet.MultiSet<uint32>) (depth: int) (dict:Dictionary.Dict) (cids:(int * uint32) list) (acc: moveDto) : (int * moveDto) =
-      // printf "Depth of: %d \n" depth
-      // printf "With: %A \n" cids
       match cids with 
       | []                         -> emptyMovePointDto // end recursion
       | _ when depth = maxDepth    -> emptyMovePointDto
@@ -168,7 +156,7 @@ module internal MoveGen
         
         // extract char from tile
         let key : char = getMinTile state cid |> fun (c', _) -> c'
-        //printf "Char is ??? %c\n" key
+
         // Update move
         let mv' : moveDto = acc @ [cid]
 
@@ -193,7 +181,6 @@ module internal MoveGen
       MultiSet.toList state.hand |> List.map (fun (id, _) -> id)
       |> List.map (fun h -> (0, h))
     
-    //printf "Start word: %A \n" word
     // all available chars on hand
     let init = List.fold (fun s (v, _) ->
         match s with
@@ -241,7 +228,6 @@ module internal MoveGen
 
     [ getDefaultHook Right; getDefaultHook Down ]
 
-  let storeBest : (int * Movement * moveDto) = (0, emptyMovement, emptyMoveDto) 
 
   let bestMove (state: stateDto) : move =  
     let maxfun = max state
@@ -277,14 +263,13 @@ module internal MoveGen
       let next = (n, h.mov, m)
       printerAgent.Post next
 
-    let aux h : unit = getBest h 
-
+    let aux h : unit = getBest h
+    
     let getRes () =
       let (_, mm, mdto) = bestMoveEver
       toMove state mm mdto
-
+    
     use cts = new System.Threading.CancellationTokenSource ((int) state.timeout)
-    //printf "test %d\n" state.timeout
     let po = new ParallelOptions()
     po.CancellationToken <- cts.Token
     po.MaxDegreeOfParallelism <- System.Environment.ProcessorCount
@@ -296,5 +281,6 @@ module internal MoveGen
       |> fun hks -> Parallel.ForEach (hks, po, fun (h) -> aux h) // STOP WITH TOKEN
       |> fun _ -> getRes ()
     with
-    | _ -> getRes ()
+    | :? System.OperationCanceledException -> getRes ()
 
+  
