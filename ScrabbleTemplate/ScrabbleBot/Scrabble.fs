@@ -112,7 +112,7 @@ module State =
       }
 
 
-
+//! TODO: Actually use nr of legal tiles
 module Scrabble =
     open System.Threading
     open Bufio
@@ -121,14 +121,15 @@ module Scrabble =
     let playGame cstream pieces (st : State.state) =
         
         let rec aux (st : State.state) : unit =
-            Print.printHand pieces (State.hand st)
-            forcePrint (sprintf "Player Turn: %d \n" st.playerTurn)
+            printf "Nr of tiles: %d\n" st.bricks.Count 
+            //Print.printHand pieces (State.hand st)
+            //forcePrint (sprintf "Player Turn: %d \n" st.playerTurn)
 
             match st.playerTurn with
             | p when p = st.playerNumber ->
-                debugPrint "Finding move...\n"
+                //debugPrint "Finding move...\n"
                 let move = st |> State.toStateDto |> nextMove
-                debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+                //debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
                 send cstream (SMPlay move)
             | _ -> ()
 
@@ -155,7 +156,7 @@ module Scrabble =
                     bricks        = brs
                     turns         = st.turns + 1u
                 }
-                printf "New hand: %A\n" st'.hand
+                //printf "New hand: %A\n" st'.hand
                 aux st'
                 
             | RCM (CMPlayed (pid, ms, points)) ->

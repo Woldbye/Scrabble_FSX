@@ -34,8 +34,8 @@ let main argv =
 
     //    let board      = ScrabbleUtil.RandomBoard.randomBoard ()
     //let board      = ScrabbleUtil.RandomBoard.randomBoardSeed (Some 42)
-    //    let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoard ()
-    let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoardSeed (Some 42)
+    let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoard ()
+    // let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoardSeed (Some 42)
 
     //    let board      = ScrabbleUtil.HoleBoard.holeBoard ()
     //    let board      = ScrabbleUtil.InfiniteHoleBoard.infiniteHoleBoard ()

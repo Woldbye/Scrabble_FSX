@@ -201,39 +201,6 @@ module internal MoveGen
     | Some (_, d) -> loopHand state.hand 0 d handIds emptyMoveDto
     | None -> emptyMoveDto
 
-  // let bestExtension (state: stateDto) (word:word) (maxMove: moveDto -> moveDto -> moveDto) : moveDto =
-  //   let rec aux (dict : Dictionary.Dict) (hand : MultiSet.MultiSet<uint32>) (acc : uint32 list) : moveDto =
-  //     let legal =
-  //       List.fold (
-  //         fun b (i, _) ->
-  //           let c = getMinChar state i
-  //           match (Dictionary.step c dict) with 
-  //           | Some (isWord, dd) -> [(isWord, dd, MultiSet.removeSingle i hand, i)] @ b
-  //           | _                 -> b
-  //       ) List.empty (MultiSet.toList hand)
-
-  //     match List.length legal with 
-  //     | 0 -> emptyMoveDto
-  //     | _ ->
-  //         List.fold (
-  //           fun b (w, d, h, i) ->
-  //             match w with 
-  //             | true  -> acc @ [i]
-  //             | false -> aux d h ( acc @ [i] )
-  //         ) emptyMoveDto legal
-      
-  //   let init = List.fold (fun s (v, _) ->
-  //     match s with
-  //     | Some (_, d) -> printf "Is going into %c\n" v; Dictionary.step v d
-  //     | None        -> None) (Some (false, state.dict)) word
-    
-  //   match init with 
-  //   | Some (_, d) -> aux d state.hand emptyMoveDto
-  //   | None -> emptyMoveDto
-
-    
-
-
 
   // Convert the input moveDto to a move
   let toMove (state: stateDto) (mm: Movement) (dto: moveDto) : move =
