@@ -169,7 +169,7 @@
 
     (* Part 4 (Optional) *) 
     type word = (char * int) list
-    type squareFun = word -> int -> int -> Result<int, Error>   
+    type squareFun = word -> int -> int -> int  
 
     // Returns a function that: 
     // Given a word, position and an acc
@@ -182,6 +182,9 @@
             stmntEval statement
             >>>= lookup "_result_" 
             |> evalSM state
+            |> function
+                | Success s -> s 
+                | Failure _ -> 0
 
     
     type coord = int * int
@@ -200,7 +203,7 @@
             |> evalSM state
             |> function
               | Success i -> i
-              | _          -> None
+              | _         -> None
 
 
     type board = {

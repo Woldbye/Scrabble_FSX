@@ -4,7 +4,7 @@
     let empty : MultiSet<'a> = MS (Map.empty, 0u)
     let isEmpty (s: MultiSet<'a>) : bool = 
         match s with MS(_, size) -> (size=0u) 
-
+    
     let size (s:MultiSet<'a>): uint32 = 
         match s with MS(_, size) -> size
 
@@ -48,3 +48,9 @@
     let toList (s: MultiSet<'k>) : ('k * uint32) list = 
         match s with 
         | MS(mp, _) -> Map.toList mp
+        
+    let rec addList (lst: ('k * uint32) list) (s:MultiSet<'k>) : MultiSet<'k> = 
+        match lst with 
+        | (k, v) :: tail -> (add k v s) |> addList tail 
+        | []         -> s
+    

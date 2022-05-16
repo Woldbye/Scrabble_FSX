@@ -111,8 +111,6 @@ module State =
         turns         = s |> turns
       }
 
-
-//! TODO: Actually use nr of legal tiles
 module Scrabble =
     open System.Threading
     open Bufio
@@ -121,7 +119,7 @@ module Scrabble =
     let playGame cstream pieces (st : State.state) =
         
         let rec aux (st : State.state) : unit =
-            printf "Nr of tiles: %d\n" st.bricks.Count 
+            //printf "Nr of tiles: %d\n" st.bricks.Count 
             //Print.printHand pieces (State.hand st)
             //forcePrint (sprintf "Player Turn: %d \n" st.playerTurn)
 
@@ -175,30 +173,43 @@ module Scrabble =
                 }
 
                 aux st'
-                
+            // If no available play
             | RCM (CMPlayFailed (pid, ms)) ->
-                debugPrint (sprintf "Id: %d\n\tMS: %A\n\t" pid ms)
-                // (* Failed play. Update your state *)
-                // let st' : State.state = {
-                //   board         = st |> State.board
-                //   dict          = st |> State.dict
-                //   playerNumber  = st |> State.playerNumber
-                //   playerTurn    = st |> State.playerTurn
-                //   nrOfPlayers   = st |> State.nrOfPlayers
-                //   hand          = st |> State.hand
-                //   tiles         = st |> State.tiles
-                //   hooks         = st |> State.hooks
-                //   bricks        = st |> State.bricks
-                // }
-                printf "oh no an error - passing \n"
-                send cstream SMPass
+
+                let rec appendNValues k v l =
+                    match v with
+                    | 0u -> l
+                    | _  -> appendNValues k (v - 1u) (l @ [k])
+                    
+                 // Here we could insert a better swapping strategy
+                st.hand
+                |> MultiSet.fold ( fun acc k v -> appendNValues k v acc ) List.empty
+                |> SMChange
+                |> send cstream
+
                 aux st
+
+            | RCM (CMChangeSuccess s) -> 
+                let st' : State.state = {
+                    board         = st.board
+                    dict          = st.dict
+                    playerNumber  = st.playerNumber // Increment playerNumber
+                    playerTurn    = st.playerTurn
+                    nrOfPlayers   = st.nrOfPlayers
+                    hand          = MultiSet.addList s MultiSet.empty 
+                    tiles         = st.tiles // Dont touch :)
+                    hooks         = st.hooks
+                    bricks        = st.bricks
+                    turns         = st.turns
+                }
+
+                aux st'
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
             | RGPE err -> printfn "Gameplay Error:\n%A" err; aux st
 
         aux st
-        forcePrint "Completed!"
+        //forcePrint "Completed!"
 
     let startGame 
             (boardP : boardProg) 

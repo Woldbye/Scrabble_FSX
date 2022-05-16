@@ -70,55 +70,55 @@
   let BAtomParse, baref = createParserForwardedToRef<bExp>()  // ~, isLetter, isVowel, isDigit
   
   // Statement
+  let SeqParse, seqref = createParserForwardedToRef<stm>()
   let StmParse, sref = createParserForwardedToRef<stm>()
   
   let AddParse = binop (pchar '+') ProdParse TermParse |>> Add <?> "Add"
   let SubParse = binop (pchar '-') ProdParse TermParse |>> Sub <?> "Sub"
-  let CharToIntParse = unop pCharToInt (parenthesise CharParse) |>> CharToInt <?> "CharToInt"
-  do tref := choice [CharToIntParse; AddParse; SubParse; ProdParse]
+  do tref := choice [AddParse; SubParse; ProdParse]
 
+  let CharParParse = parenthesise CharParse
   let MulParse = binop (pchar '*') AtomParse ProdParse |>> Mul <?> "Mul"
   let DivParse = binop (pchar '/') AtomParse ProdParse |>> Div <?> "Div"
   let ModParse = binop (pchar '%') AtomParse ProdParse |>> Mod <?> "Mod"
-  do pref := choice [MulParse; DivParse; ModParse; AtomParse]
+  let CharToIntParse = unop pCharToInt CharParParse |>> CharToInt <?> "CharToInt"
+  do pref := choice [MulParse; DivParse; ModParse; CharToIntParse; AtomParse]
 
   let NParse   = pint32 |>> N <?> "Int"
   let ParParse = parenthesise TermParse
   let NegParse = unop (pchar '-') TermParse <?> "Mul" |>> (fun n -> Mul (N -1, n)) <?> "Mul"
   let VarParse = pid |>> V <?> "V"
-  let PVParse  = unop pPointValue (parenthesise TermParse) |>> PV <?> "PV"
-  do aref := choice [NegParse; PVParse; ParParse; NParse; VarParse]
+  let PVParse  = unop pPointValue ParParse|>> PV <?> "PV"
+  do aref := choice [NegParse; PVParse; VarParse; NParse; ParParse]
 
-  let AexpParse = TermParse 
   
   // Char parsing
-  let CharAtomParse  = singleQuotes (whitespaceChar <|> palphanumeric) |>> C <?> "C"
+  let CharAtomParse  = singleQuotes (anyChar <|> whitespaceChar) |>> C <?> "Char"
 
-  let CharValueParse = unop pCharValue (parenthesise TermParse) |>> CV <?> "CV"
-  let ToUpperParse   = unop pToUpper (parenthesise CharParse) |>> ToUpper <?> "ToUpper"
-  let ToLowerParse   = unop pToLower (parenthesise CharParse) |>> ToLower <?> "ToLower"
-  let IntToCharParse = unop pIntToChar (parenthesise TermParse) |>> IntToChar <?> "IntToChar"
-
-  do cref := choice [ ToUpperParse; ToLowerParse; IntToCharParse; CharValueParse; CharAtomParse ]
+  let CharValueParse = pCharValue >*>. ParParse |>> CV <?> "CharValue"
+  let ToUpperParse   = pToUpper >*>. CharParParse |>> ToUpper <?> "ToUpper"
+  let ToLowerParse   = pToLower >*>. CharParParse |>> ToLower <?> "ToLower"
+  let IntToCharParse = pIntToChar >*>. ParParse |>> IntToChar <?> "IntToChar"
   
-  let ConjParse = binop (pstring "/\\") BCmpParse BSetParse |>> Conj <?> "Conj"
-  let UnionParse = binop (pstring "\\/") BCmpParse BSetParse <?> "Conj"
-                      |>> (fun (a, b) -> Conj (Not a, Not b)) <?> "Conj"
+  do cref := choice [ IntToCharParse; ToUpperParse; ToLowerParse; CharValueParse; CharParParse; CharAtomParse ]
+  
+  let ConjParse = binop (pstring "/\\") BCmpParse BSetParse |>> (fun (a, b) -> a .&&. b) <?> "Conj"
+  let UnionParse = binop (pstring "\\/") BCmpParse BSetParse |>> (fun (a, b) -> a .||. b) <?> "Disj"
   
   do bsref := choice [ ConjParse; UnionParse; BCmpParse ]
     
-  let AEqParse    = binop (pchar '=') AexpParse AexpParse |>> AEq <?> "AEq"
-  let ANotEqParse = binop (pstring "<>") AexpParse AexpParse <?> "AEq"
+  let AEqParse    = binop (pchar '=') TermParse TermParse |>> AEq <?> "AEq"
+  let ANotEqParse = binop (pstring "<>") TermParse TermParse <?> "AEq"
                       |>> (fun (a, b) -> Not (AEq (a, b))) <?> "AEq"
-  let ALtParse    = binop (pchar '<') AexpParse AexpParse |>> ALt <?> "ALt"
-  let ALtEqParse  = binop (pstring "<=") AexpParse AexpParse
+  let ALtParse    = binop (pchar '<') TermParse TermParse |>> ALt <?> "ALt"
+  let ALtEqParse  = binop (pstring "<=") TermParse TermParse
                       |>> (fun (a, b) ->  Conj (Not (ALt (a,b)), Not (AEq ((a, b)))))      
-  let AGrtParse   = binop (pchar '>') AexpParse AexpParse 
+  let AGrtParse   = binop (pchar '>') TermParse TermParse 
                       |>> (fun (a, b) -> Not (Conj (Not (ALt (a,b)), Not (AEq ((a, b))))))
-  let AGrEqParse  = binop (pstring ">=") AexpParse AexpParse 
+  let AGrEqParse  = binop (pstring ">=") TermParse TermParse 
                       |>> (fun (a, b) -> Not (ALt (a, b)))
   
-  bcref := choice [ AEqParse; ANotEqParse; ALtParse; ALtEqParse; AGrtParse; AGrEqParse; BAtomParse ]
+  do bcref := choice [ AEqParse; ANotEqParse; ALtParse; ALtEqParse; AGrtParse; AGrEqParse; BAtomParse ]
   
   let notParse      = unop (pchar '~') BAtomParse |>> Not <?> "Not"
   let isLetterParse = unop pIsLetter (parenthesise CharParse) |>> IsLetter <?> "IsLetter"
@@ -129,10 +129,14 @@
   let FalseParse = pFalse |>> (fun _ -> FF) <?> "FF"
   
   do baref := choice [ notParse; isLetterParse; isVowelParse; isDigitParse; TrueParse; FalseParse ]
+
+
+  let seqParse = binop (pchar ';') StmParse SeqParse |>> (fun (x,y) -> Seq (x, y)) <?> "Seq"
   
+  do seqref := choice [ seqParse; StmParse ]
+
   let declareParse = pdeclare |>> (fun s -> Declare s) <?> "Declare"
-  let assParse     = binop (pstring ":=") pid AexpParse |>> (fun (x,y) -> Ass (x, y)) <?> "Ass"
-  let seqParse     = binop (pchar ';') StmParse StmParse |>> (fun (x,y) -> Seq (x, y)) <?> "Seq"
+  let assParse     = binop (pstring ":=") pid TermParse |>> Ass <?> "Ass"
   let whileParse   = (unop pwhile (parenthesise BSetParse)) .>*>. 
                       (unop pthen (brackets StmParse)) |>> 
                       (fun (x,y) -> While (x, y)) <?>
@@ -151,9 +155,10 @@
     
   do sref := choice [ declareParse; assParse; seqParse; whileParse; ifParse ]
 
+  let AexpParse = TermParse 
   let CexpParse = CharParse
   let BexpParse = BSetParse
-  let stmntParse = StmParse
+  let stmntParse = SeqParse
 
   (* These five types will move out of this file once you start working on the project *)
   type word   = (char * int) list
@@ -168,7 +173,8 @@
       |> exec getSuccess
       |> exec stmntToSquareFun
   
-  type boardFun2 = coord -> Result<square option, Error>
+  type boardFun2 = coord -> square option
+  
   type board = {
       center        : coord
       defaultSquare : square
@@ -179,8 +185,7 @@
   let parseBoardProg (prog:string) (squares:Map<int, square>) : boardFun2 =
     // let exec cmd = Map.map (fun _ v -> v |> cmd) 
     let stm1 = getSuccess(run stmntParse prog)  // stm
-    let x = stmntToBoardFun stm1 squares
-    fun c -> Success (x c)
+    stmntToBoardFun stm1 squares
 
   let mkBoard (bp: boardProg) : board =
     let sqMap = Map.map (fun _ -> parseSquareProg) bp.squares // Map<int, square>
@@ -191,3 +196,5 @@
       defaultSquare = defSq;
       squares = squares;
     }
+
+    // fun _ -> {center = (0,0); defaultSquare = Map.empty; squares = fun _ -> Success (Some Map.empty)}

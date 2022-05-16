@@ -30,10 +30,7 @@ module internal MoveGen
       |> List.map (fun (j, sq_fun) ->
           (
             j,
-            fun (acc: int) ->
-              match (sq_fun tiles i acc) with
-              | Success res -> res 
-              | Failure f -> 0
+            fun (acc: int) -> sq_fun tiles i acc
           )
       )
 
@@ -104,7 +101,7 @@ module internal MoveGen
   let evalMove (st: stateDto) (mv:move) : int =
     let folder (acc: (square list) option) (c, _) : ((square list) option) =
       match (st.board.squares c) with
-        | Success sqOpt when (sqOpt.IsSome && acc.IsSome)
+        | sqOpt when (sqOpt.IsSome && acc.IsSome)
             ->
             match (st.bricks.ContainsKey c) with
             | true  -> None
@@ -147,11 +144,9 @@ module internal MoveGen
 
   let getMinChar st i = getMinTile st i |> fun (c, _) -> c
 
-  /// <returns> 
   /// Best scoring playable move that extends `word`, 
-  /// if no extension available `emptyMove` 
-  /// <returns /> 
-  let bestExtension (state: stateDto) (word:word) (maxMove: moveDto -> moveDto -> moveDto) : moveDto =
+  /// if no extension available `emptyMove`
+  let bestExtension (state: stateDto) (word:word) (maxDepth: int) (maxMove: moveDto -> moveDto -> moveDto) : moveDto =
     // TECHNIQUE: BACKTRACKING:
     // GOAL: RUN ALL POSSIBLE EXTENSIONS OF INPUT WORD
     let rec loopHand (hand: MultiSet.MultiSet<uint32>) (depth: int) (dict:Dictionary.Dict) (cids:(int * uint32) list) (acc:moveDto) : moveDto =
@@ -159,6 +154,7 @@ module internal MoveGen
       // printf "With: %A \n" cids
       match cids with 
       | []                         -> emptyMoveDto // end recursion
+      | _ when depth = maxDepth    -> emptyMoveDto
       | (d, _) :: _ when d > depth -> emptyMoveDto
       | (_, c) :: tail when MultiSet.contains c hand = false -> loopHand hand depth dict tail acc
       | (d, cid) :: tail -> // cid = char id
@@ -244,7 +240,7 @@ module internal MoveGen
 
     let getBest (h: Hook) (cur: moveDto) (m: Movement) : (Movement * moveDto) =
       let bmf a b = maxfun h.mov h.mov a b |> fun (_, d) -> d
-      let next = bestext h.word bmf
+      let next = bestext h.word h.count bmf
       maxfun m h.mov cur next
 
     // Run max_move recursively by applying backtracking

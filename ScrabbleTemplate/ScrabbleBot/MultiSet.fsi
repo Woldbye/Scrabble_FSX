@@ -29,3 +29,5 @@
     val foldBack: f: backfolder<'k,uint32,'a> -> s: MultiSet<'k> -> acc: 'a -> 'a when 'k: comparison
 
     val toList: MultiSet<'k> -> ('k * uint32) list
+
+    val addList: (('k * uint32) list) -> MultiSet<'k> -> MultiSet<'k> when 'k: comparison

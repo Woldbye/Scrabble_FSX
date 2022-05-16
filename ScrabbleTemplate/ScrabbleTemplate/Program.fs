@@ -22,20 +22,20 @@ let spawnMultiples name dict bot =
 
 [<EntryPoint>]
 let main argv =
-    ScrabbleUtil.DebugPrint.toggleDebugPrint true // Change to false to supress debug output
+    ScrabbleUtil.DebugPrint.toggleDebugPrint false // Change to false to supress debug output
 
     System.Console.BackgroundColor <- System.ConsoleColor.White
     System.Console.ForegroundColor <- System.ConsoleColor.Black
     System.Console.Clear()
 
 
-    // let board        = ScrabbleUtil.StandardBoard.standardBoard ()
-    //let board      = ScrabbleUtil.InfiniteBoard.infiniteBoard ()
+    //let board        = ScrabbleUtil.StandardBoard.standardBoard ()
+    let board      = ScrabbleUtil.InfiniteBoard.infiniteBoard ()
 
     //    let board      = ScrabbleUtil.RandomBoard.randomBoard ()
     //let board      = ScrabbleUtil.RandomBoard.randomBoardSeed (Some 42)
-    let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoard ()
-    // let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoardSeed (Some 42)
+    //let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoard ()
+    //let board      = ScrabbleUtil.InfiniteRandomBoard.infiniteRandomBoardSeed (Some 42)
 
     //    let board      = ScrabbleUtil.HoleBoard.holeBoard ()
     //    let board      = ScrabbleUtil.InfiniteHoleBoard.infiniteHoleBoard ()
@@ -57,9 +57,11 @@ let main argv =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
 
     // Uncomment this line to call your client
-    let players = spawnMultiples "Bufiobot" dictionary bufiobot.Scrabble.startGame 2
-      //= [("Bufiobot", bufiobot.Scrabble.startGame)]
-
+    let players = // spawnMultiples "Bufiobot" dictionary Oxyphenbutazone.Scrabble.startGame 2
+      [
+        ("Bufiobot", dictionary, bufiobot.Scrabble.startGame);
+        ("OxyphenButazone", dictionary, Oxyphenbutazone.Scrabble.startGame)
+      ]
     // let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 2
     
     // Dictionary Test
