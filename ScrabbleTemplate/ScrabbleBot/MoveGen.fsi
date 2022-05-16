@@ -4,6 +4,7 @@ module internal MoveGen
     open Parser
     open StateMonad
     open Entities
+    open System.Threading.Tasks
 
     type moveDto = uint32 list
     val bestMove : stateDto -> Entities.move

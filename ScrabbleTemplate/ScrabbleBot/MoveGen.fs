@@ -5,6 +5,7 @@ module internal MoveGen
   open StateMonad
   open Entities
   open System
+  open System.Threading.Tasks
 
     
   // Ordered List of ids
@@ -15,6 +16,7 @@ module internal MoveGen
   let prefix (w:word) : char = w.Head |> fun (c,v) -> c
   let emptyMove: move = []  
   let emptyMoveDto: moveDto = []
+  let emptyMovePointDto: (int * moveDto) = (0 , [])
 
 
   /// <description> 
@@ -146,20 +148,20 @@ module internal MoveGen
 
   /// Best scoring playable move that extends `word`, 
   /// if no extension available `emptyMove`
-  let bestExtension (state: stateDto) (word:word) (maxDepth: int) (maxMove: moveDto -> moveDto -> moveDto) : moveDto =
+  let bestExtension (state: stateDto) (word:word) (maxDepth: int) (maxMove: moveDto -> moveDto -> (int * moveDto)) : (int * moveDto) =
     // TECHNIQUE: BACKTRACKING:
     // GOAL: RUN ALL POSSIBLE EXTENSIONS OF INPUT WORD
-    let rec loopHand (hand: MultiSet.MultiSet<uint32>) (depth: int) (dict:Dictionary.Dict) (cids:(int * uint32) list) (acc:moveDto) : moveDto =
+    let rec loopHand (hand: MultiSet.MultiSet<uint32>) (depth: int) (dict:Dictionary.Dict) (cids:(int * uint32) list) (acc: moveDto) : (int * moveDto) =
       // printf "Depth of: %d \n" depth
       // printf "With: %A \n" cids
       match cids with 
-      | []                         -> emptyMoveDto // end recursion
-      | _ when depth = maxDepth    -> emptyMoveDto
-      | (d, _) :: _ when d > depth -> emptyMoveDto
+      | []                         -> emptyMovePointDto // end recursion
+      | _ when depth = maxDepth    -> emptyMovePointDto
+      | (d, _) :: _ when d > depth -> emptyMovePointDto
       | (_, c) :: tail when MultiSet.contains c hand = false -> loopHand hand depth dict tail acc
       | (d, cid) :: tail -> // cid = char id
         // Skip branch
-        let m1 : moveDto = loopHand hand depth dict (tail @ [(d + 1, cid)]) acc
+        let m1 : (int * moveDto) = loopHand hand depth dict (tail @ [(d + 1, cid)]) acc 
 
         // Remove played tile from hand
         let hand' = MultiSet.removeSingle cid hand;
@@ -168,19 +170,24 @@ module internal MoveGen
         let key : char = getMinTile state cid |> fun (c', _) -> c'
         //printf "Char is ??? %c\n" key
         // Update move
-        let mv' : moveDto = acc @ [cid] 
+        let mv' : moveDto = acc @ [cid]
 
         // Try play char
         let recHandLoop dd = loopHand hand' (depth + 1) dd cids mv'
-
-        let m2 : moveDto = 
+        let m2 : (int * moveDto) = 
           match (Dictionary.step key dict) with 
           // No finished word, check sub-branches
           | Some (false, d') -> recHandLoop d'
-          | Some (true, d')  -> recHandLoop d' |> maxMove mv'
+          | Some (true, d')  -> recHandLoop d' |> fun (_, v) -> maxMove v mv'
           // No possible play in sub-branch 
-          | None -> emptyMoveDto
-        maxMove m1 m2
+          | None -> emptyMovePointDto
+        
+        let (m1v, _) = m1
+        let (m2v, _) = m2
+
+        // Update post
+        if m1v < m2v then m2 else m1
+        
     // Ids -> state.tiles.[id]
     let handIds =
       MultiSet.toList state.hand |> List.map (fun (id, _) -> id)
@@ -195,7 +202,7 @@ module internal MoveGen
 
     match init with 
     | Some (_, d) -> loopHand state.hand 0 d handIds emptyMoveDto
-    | None -> emptyMoveDto
+    | None -> emptyMovePointDto
 
 
   // Convert the input moveDto to a move
@@ -215,10 +222,10 @@ module internal MoveGen
 
     loopDto mm dto emptyMove
 
-  let max (state: stateDto) (mov1: Movement) (mov2: Movement) (m1: moveDto) (m2:moveDto) : (Movement * moveDto) =
+  let max (state: stateDto) (mov1: Movement) (mov2: Movement) (m1: moveDto) (m2:moveDto) : (int * Movement * moveDto) =
     let ev1 = evalMove state (toMove state mov1 m1)
     let ev2 = evalMove state (toMove state mov2 m2)
-    if ev1 > ev2 then (mov1, m1) else (mov2, m2)
+    if ev1 > ev2 then (ev1, mov1, m1) else (ev2, mov2, m2)
 
   let firstMoveHooks (state: stateDto) : Hook list =
     let getDefaultHook dir =
@@ -234,24 +241,60 @@ module internal MoveGen
 
     [ getDefaultHook Right; getDefaultHook Down ]
 
-  let bestMove (state: stateDto) : move = 
+  let storeBest : (int * Movement * moveDto) = (0, emptyMovement, emptyMoveDto) 
+
+  let bestMove (state: stateDto) : move =  
     let maxfun = max state
     let bestext = bestExtension state
 
-    let getBest (h: Hook) (cur: moveDto) (m: Movement) : (Movement * moveDto) =
-      let bmf a b = maxfun h.mov h.mov a b |> fun (_, d) -> d
-      let next = bestext h.word h.count bmf
-      maxfun m h.mov cur next
+    let mutable bestMoveEver: (int * Movement * moveDto) = (0, emptyMovement, emptyMoveDto)  
+    let printerAgent = MailboxProcessor.Start(fun inbox->
+    
+      // the message processing function
+      let rec messageLoop (st: (int * Movement * moveDto)) = async{
+          
+        // read a message
+        let! inc = inbox.Receive()
 
-    // Run max_move recursively by applying backtracking
-    let rec aux (hooks: Hook list) (best: moveDto) (bestMm: Movement) : move =
-      // printf "Best for now is %A \n" best
-      match hooks with
-      | h :: [] -> getBest h best bestMm |> fun (m, d) -> toMove state m d
-      | h :: hs -> getBest h best bestMm |> fun (m, d) -> aux hs d m 
-      | [] -> emptyMove // If no more words to check in this branch, just return empty move
+        let (nscore, _, _) = inc
+        let (score, _, _) = st
 
-    match state.hooks with
-    | []  -> state |> firstMoveHooks
-    | hks -> hks
-    |> fun hks -> aux hks emptyMoveDto hks.Head.mov
+        // loop to top
+        let ans = if score < nscore then inc else st
+        
+        bestMoveEver <- ans
+
+        return! messageLoop ans
+      }
+
+      // start the loop
+      messageLoop (0, emptyMovement, emptyMoveDto)
+    )
+
+    let getBest (h: Hook) : unit =
+      let bmf a b = maxfun h.mov h.mov a b |> fun (v, _, m) -> (v, m)
+      let (n, m) = bestext h.word h.count bmf
+      let next = (n, h.mov, m)
+      printerAgent.Post next
+
+    let aux h : unit = getBest h 
+
+    let getRes () =
+      let (_, mm, mdto) = bestMoveEver
+      toMove state mm mdto
+
+    use cts = new System.Threading.CancellationTokenSource ((int) state.timeout)
+    //printf "test %d\n" state.timeout
+    let po = new ParallelOptions()
+    po.CancellationToken <- cts.Token
+    po.MaxDegreeOfParallelism <- System.Environment.ProcessorCount
+    
+    try
+      match state.hooks with
+      | []  -> state |> firstMoveHooks
+      | hks -> hks
+      |> fun hks -> Parallel.ForEach (hks, po, fun (h) -> aux h) // STOP WITH TOKEN
+      |> fun _ -> getRes ()
+    with
+    | _ -> getRes ()
+

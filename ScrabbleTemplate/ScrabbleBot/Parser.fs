@@ -139,9 +139,8 @@
   let declareParse = pdeclare |>> (fun s -> Declare s) <?> "Declare"
   let assParse     = binop (pstring ":=") pid TermParse |>> Ass <?> "Ass"
   let whileParse   = (unop pwhile (parenthesise BSetParse)) .>*>. 
-                      (unop pthen (brackets StmParse)) |>> 
-                      (fun (x,y) -> While (x, y)) <?> "While"
-
+                     (unop pthen (brackets StmParse)) |>> 
+                     (fun (x,y) -> While (x, y)) <?> "While"
 
   let iTEParse  = (unop pif BoolParParse) .>*>.
                   (unop pthen (brackets StmParse)) .>*>.

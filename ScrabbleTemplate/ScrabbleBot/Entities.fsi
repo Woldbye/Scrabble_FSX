@@ -20,7 +20,7 @@ module internal Entities
     word: word
     count: int
   }
-
+  val emptyMovement: Movement;
   val updateMovement: Movement -> int -> int -> Movement
   val nextPos: Movement -> Movement
   val prevPos: Movement -> Movement
@@ -41,4 +41,5 @@ module internal Entities
     hooks         : Hook list
     bricks        : Map<coord, tile>   
     turns         : uint32
+    timeout       : uint32
   }

@@ -19,6 +19,7 @@ module internal Entities
     count: int
   }
 
+  let emptyMovement = { pos=(0,0); dir= Right; }
   let updateMovement mov dx dy : Movement =
     let (x, y) : coord = mov.pos
     {
@@ -72,4 +73,5 @@ module internal Entities
     hooks         : Hook list 
     bricks        : Map<coord, tile>   
     turns         : uint32
+    timeout       : uint32
   }

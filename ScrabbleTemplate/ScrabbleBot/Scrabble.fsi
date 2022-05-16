@@ -16,4 +16,3 @@ module Scrabble =
         uint32 option ->             (* Timeout in miliseconds *)
         Stream ->                    (* Communication channel to the server *)
         (unit -> unit)               (* Delay to allow everyone to start at the same time after setup *)
-

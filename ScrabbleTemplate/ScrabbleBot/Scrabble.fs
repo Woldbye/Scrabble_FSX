@@ -53,21 +53,13 @@ module State =
         hand          : MultiSet.MultiSet<uint32>
         tiles         : Map<uint32, tile>
         bricks        : Map<coord, tile>
-        hooks         : Hook list // TODO: Fix hooks
+        hooks         : Hook list
         turns         : uint32
+        timeout       : uint32
         // TO:DO add player number
     }
 
-    // TODO:
-    // Loop through all bricks
-    // Find all hooks
-    //    create helper functions for easier time (next on movement, isSquareOccupied, ...)
-    // Find #chars legal to place
-    // Update states
-    // Send / recieve correct messages
-
-
-    let mkState b d pn pt nop h t hs r ts = {
+    let mkState b d pn pt nop h t hs r ts (tio: uint32 option) = {
       board = b;
       dict = d;
       playerNumber = pn;
@@ -78,6 +70,7 @@ module State =
       hooks = hs;
       bricks = r;
       turns = ts;
+      timeout = if tio.IsSome then tio.Value else (2u * 1_000u);
     }
 
     let board st         = st.board
@@ -90,6 +83,7 @@ module State =
     let bricks st        = st.bricks
     let hooks st         = st.hooks
     let turns st         = st.turns
+    let timeout st       = st.timeout
 
 
     let nextTurn st =
@@ -109,13 +103,14 @@ module State =
         hooks         = s |> hooks
         bricks        = s |> bricks
         turns         = s |> turns
+        timeout       = s |> timeout
       }
 
 module Scrabble =
     open System.Threading
     open Bufio
     open MoveGen
-    
+
     let playGame cstream pieces (st : State.state) =
         
         let rec aux (st : State.state) : unit =
@@ -153,6 +148,7 @@ module Scrabble =
                     hooks         = (brs |> bricksToHooks)
                     bricks        = brs
                     turns         = st.turns + 1u
+                    timeout       = st.timeout
                 }
                 //printf "New hand: %A\n" st'.hand
                 aux st'
@@ -170,6 +166,7 @@ module Scrabble =
                   hooks         = brs |> bricksToHooks
                   bricks        = brs
                   turns         = st.turns + 1u
+                  timeout       = st.timeout
                 }
 
                 aux st'
@@ -201,6 +198,7 @@ module Scrabble =
                     hooks         = st.hooks
                     bricks        = st.bricks
                     turns         = st.turns
+                    timeout       = st.timeout
                 }
 
                 aux st'
@@ -235,5 +233,5 @@ module Scrabble =
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber playerTurn numPlayers handSet tiles [] Map.empty 0u)
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber playerTurn numPlayers handSet tiles [] Map.empty 0u timeout)
         
