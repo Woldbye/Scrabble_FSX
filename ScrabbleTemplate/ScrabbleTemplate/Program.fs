@@ -77,5 +77,6 @@ let main argv =
     
     ScrabbleUtil.DebugPrint.forcePrint ("Server has terminated. Press Enter to exit program.\n")
     System.Console.ReadLine () |> ignore
+    
 
     0

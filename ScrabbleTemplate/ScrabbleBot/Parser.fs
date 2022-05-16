@@ -102,6 +102,8 @@
   
   do cref := choice [ IntToCharParse; ToUpperParse; ToLowerParse; CharValueParse; CharParParse; CharAtomParse ]
   
+  let BoolParParse = parenthesise BSetParse
+
   let ConjParse = binop (pstring "/\\") BCmpParse BSetParse |>> (fun (a, b) -> a .&&. b) <?> "Conj"
   let UnionParse = binop (pstring "\\/") BCmpParse BSetParse |>> (fun (a, b) -> a .||. b) <?> "Disj"
   
@@ -128,10 +130,9 @@
   let TrueParse  = pTrue |>> (fun _ -> TT) <?> "TT" 
   let FalseParse = pFalse |>> (fun _ -> FF) <?> "FF"
   
-  do baref := choice [ notParse; isLetterParse; isVowelParse; isDigitParse; TrueParse; FalseParse ]
+  do baref := choice [ TrueParse; FalseParse; notParse; isLetterParse; isVowelParse; isDigitParse; BoolParParse; ]
 
-
-  let seqParse = binop (pchar ';') StmParse SeqParse |>> (fun (x,y) -> Seq (x, y)) <?> "Seq"
+  let seqParse = binop (pchar ';') StmParse SeqParse |>> Seq <?> "Seq"
   
   do seqref := choice [ seqParse; StmParse ]
 
@@ -139,21 +140,20 @@
   let assParse     = binop (pstring ":=") pid TermParse |>> Ass <?> "Ass"
   let whileParse   = (unop pwhile (parenthesise BSetParse)) .>*>. 
                       (unop pthen (brackets StmParse)) |>> 
-                      (fun (x,y) -> While (x, y)) <?>
-                      "While"
-  
-  
-  // if and else parse
-  let ifParse      = (unop pif (parenthesise BSetParse)) .>*>.
-                      (unop pthen (brackets StmParse)) .>*>.
-                      (opt (unop pelse (brackets StmParse))) |>>
-                      (fun ((b, s), oe) -> ITE ( b, s,
-                          match oe with 
-                          | Some v -> v
-                          | None   -> Skip
-                      ))
-    
-  do sref := choice [ declareParse; assParse; seqParse; whileParse; ifParse ]
+                      (fun (x,y) -> While (x, y)) <?> "While"
+
+
+  let iTEParse  = (unop pif BoolParParse) .>*>.
+                  (unop pthen (brackets StmParse)) .>*>.
+                  (unop pelse (brackets StmParse)) |>>
+                  (fun ((a, b), c) -> ITE (a, b, c)) <?> "ITE"
+
+  let iFParse   = (unop pif BoolParParse) .>*>.
+                  (unop pthen (brackets StmParse)) |>>
+                  (fun (a, b) -> ITE (a, b, Skip)) <?> "IT"
+
+                      
+  do sref := choice [ iTEParse; iFParse; whileParse; declareParse; assParse ] // STM_PARSE
 
   let AexpParse = TermParse 
   let CexpParse = CharParse

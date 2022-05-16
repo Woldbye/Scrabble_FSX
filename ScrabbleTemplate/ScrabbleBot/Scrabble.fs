@@ -115,7 +115,7 @@ module Scrabble =
     open System.Threading
     open Bufio
     open MoveGen
-
+    
     let playGame cstream pieces (st : State.state) =
         
         let rec aux (st : State.state) : unit =
